@@ -50,10 +50,17 @@ describe('PuckEditor', () => {
     const props = mockPuckSpy.mock.calls[0][0];
     expect(Object.keys(props.config.components)).toHaveLength(13);
     expect(props.data).toBe(defaultData);
-    expect(props.onChange).toBe(onChange);
-    // Puck's own header actions are suppressed.
+    // onChange is wrapped (the latest doc is kept for fullscreen remounts) but
+    // must still forward every change to the widget's handler.
+    const changed = { ...defaultData, root: { props: { title: 'x' } } };
+    props.onChange(changed);
+    expect(onChange).toHaveBeenCalledWith(changed);
+    // Puck's own header actions (its Publish button) are replaced with the
+    // fullscreen toggle — persistence belongs to Wagtail's form submit.
     expect(props.overrides).toBeDefined();
     expect(typeof props.overrides.headerActions).toBe('function');
-    expect(props.overrides.headerActions()).toBeNull();
+    const actions = props.overrides.headerActions();
+    expect(actions.type).toBe('button');
+    expect(actions.props.title).toMatch(/fullscreen/i);
   });
 });

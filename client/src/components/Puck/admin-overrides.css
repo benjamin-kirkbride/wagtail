@@ -1,0 +1,37 @@
+/*
+ * Wagtail admin layout overrides for the Puck editor field.
+ *
+ * Wagtail lays out every form field in a narrow reading column (.w-form-width
+ * and .w-field__wrapper cap at 840px) under a labelled, collapsible panel
+ * header. That presentation is right for a title or a date — not for a visual
+ * page editor, which needs every pixel the content area has. Scoped via :has()
+ * so only panels actually containing a Puck editor are affected; on a browser
+ * without :has() support this degrades to the narrow default, nothing breaks.
+ */
+
+/* Let the editor take the full content-area width. */
+.w-form-width:has([data-puck-editor]),
+.w-field__wrapper:has([data-puck-editor]) {
+  max-width: none;
+}
+
+/* The tab content adds 80px reading gutters on each side; slim them so the
+   editor gets the pixels instead. (The ~200px to the left of the content area
+   is the nav sidebar itself — that one is real UI and stays.) */
+.tab-content:has([data-puck-editor]) {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* Drop the field-panel chrome (the "Puck body" heading row: label, collapse
+   chevron, comment button). The editor is the page's content surface, not one
+   labelled field among many — the heading is noise and block comments are out
+   of scope for v1 anyway. */
+.w-panel:has([data-puck-editor]) > .w-panel__header {
+  display: none;
+}
+
+/* The hidden header normally provides the panel's top spacing. */
+.w-panel:has([data-puck-editor]) {
+  margin-top: 1rem;
+}

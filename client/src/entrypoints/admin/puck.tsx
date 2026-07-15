@@ -1,4 +1,5 @@
 import '@puckeditor/core/puck.css';
+import '../../components/Puck/admin-overrides.css';
 
 import { createRoot } from 'react-dom/client';
 import type { Data } from '@puckeditor/core';
