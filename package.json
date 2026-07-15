@@ -16,40 +16,101 @@
     "Safari >= 16"
   ],
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "ts",
-      "tsx",
-      "json",
-      "node"
-    ],
-    "moduleNameMapper": {
-      "jquery": "<rootDir>/wagtail/admin/static_src/wagtailadmin/js/vendor/jquery-3.6.0.min.js"
-    },
-    "transform": {
-      "^.+\\.(js|ts|tsx)$": "ts-jest"
-    },
-    "testEnvironment": "jsdom",
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/build/",
-      "client/tests/integration"
-    ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
       "/tests/"
     ],
-    "setupFiles": [
-      "./client/tests/adapter.js",
-      "./client/tests/stubs.js",
-      "./client/tests/mock-fetch.js",
-      "./client/tests/mock-jquery.js"
-    ],
-    "setupFilesAfterEnv": [
-      "./client/tests/utils.js"
-    ],
-    "snapshotSerializers": [
-      "enzyme-to-json/serializer"
+    "projects": [
+      {
+        "displayName": "default",
+        "moduleFileExtensions": [
+          "js",
+          "ts",
+          "tsx",
+          "json",
+          "node"
+        ],
+        "moduleNameMapper": {
+          "jquery": "<rootDir>/wagtail/admin/static_src/wagtailadmin/js/vendor/jquery-3.6.0.min.js"
+        },
+        "transform": {
+          "^.+\\.(js|ts|tsx)$": "ts-jest"
+        },
+        "testEnvironment": "jsdom",
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "/build/",
+          "client/tests/integration",
+          "client/src/components/Puck/",
+          "client/src/entrypoints/admin/puck.test",
+          "client/src/entrypoints/ssr/"
+        ],
+        "setupFiles": [
+          "./client/tests/adapter.js",
+          "./client/tests/stubs.js",
+          "./client/tests/mock-fetch.js",
+          "./client/tests/mock-jquery.js"
+        ],
+        "setupFilesAfterEnv": [
+          "./client/tests/utils.js"
+        ],
+        "snapshotSerializers": [
+          "enzyme-to-json/serializer"
+        ]
+      },
+      {
+        "displayName": "puck",
+        "testEnvironment": "jsdom",
+        "moduleFileExtensions": [
+          "tsx",
+          "ts",
+          "jsx",
+          "js",
+          "json",
+          "node"
+        ],
+        "testMatch": [
+          "<rootDir>/client/src/components/Puck/**/*.test.{ts,tsx}",
+          "<rootDir>/client/src/entrypoints/admin/puck.test.{ts,tsx}",
+          "<rootDir>/client/src/entrypoints/ssr/**/*.test.{ts,tsx}"
+        ],
+        "moduleNameMapper": {
+          "^react$": "react18",
+          "^react-dom$": "react-dom18",
+          "^react-dom/(.*)$": "react-dom18/$1",
+          "^react/(.*)$": "react18/$1",
+          "\\.(css|scss)$": "<rootDir>/client/tests/style-mock.js"
+        },
+        "transform": {
+          "^.+\\.(js|jsx|ts|tsx)$": [
+            "babel-jest",
+            {
+              "babelrc": false,
+              "configFile": false,
+              "presets": [
+                [
+                  "@babel/preset-env",
+                  {
+                    "targets": {
+                      "node": "current"
+                    }
+                  }
+                ],
+                [
+                  "@babel/preset-react",
+                  {
+                    "runtime": "automatic"
+                  }
+                ],
+                "@babel/preset-typescript"
+              ]
+            }
+          ]
+        },
+        "setupFilesAfterEnv": [
+          "./client/tests/puck-setup.js"
+        ]
+      }
     ]
   },
   "devDependencies": {
@@ -61,6 +122,10 @@
     "@storybook/addon-docs": "10.2.4",
     "@storybook/addon-webpack5-compiler-babel": "^4.0.0",
     "@storybook/react-webpack5": "10.2.4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/autosize": "^4.0.3",
     "@types/draft-js": "^0.10.45",
     "@types/jest": "^29.5.14",
@@ -117,6 +182,7 @@
   },
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
+    "@puckeditor/core": "^0.22.1",
     "@tippyjs/react": "^4.2.6",
     "a11y-dialog": "^8.1.4",
     "autosize": "^6.0.1",
@@ -128,12 +194,15 @@
     "focus-trap-react": "^10.3.1",
     "immer": "^10.1.3",
     "js-cookie": "^3.0.5",
+    "lucide-react": "^0.468.0",
     "mousetrap": "^1.6.5",
     "prop-types": "^15.8.1",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
+    "react-dom18": "npm:react-dom@^18.3.1",
     "react-redux": "^8.1.3",
     "react-transition-group": "^1.1.3",
+    "react18": "npm:react@^18.3.1",
     "redux": "^5.0.1",
     "redux-thunk": "^3.1.0",
     "reselect": "^5.1.1",
@@ -144,7 +213,9 @@
   },
   "scripts": {
     "start": "webpack --config ./client/webpack.config.js --mode development --progress --watch",
-    "build": "webpack --config ./client/webpack.config.js --mode production",
+    "start:puck": "webpack --config ./client/webpack.puck.config.js --mode development --watch",
+    "build": "webpack --config ./client/webpack.config.js --mode production && npm run build:puck",
+    "build:puck": "webpack --config ./client/webpack.puck.config.js --mode production",
     "fix": "npm run @all -- 'npm:fix:*'",
     "fix:css": "stylelint --fix **/*.scss",
     "fix:js": "eslint --fix .",

@@ -26,6 +26,13 @@
     "node_modules",
     "static",
     // Files with template syntax.
-    "wagtail/contrib/search_promotions/templates/wagtailsearchpromotions/includes/searchpromotions_formset.js"
+    "wagtail/contrib/search_promotions/templates/wagtailsearchpromotions/includes/searchpromotions_formset.js",
+    // The Puck editor is built against React 18 with Babel (see
+    // client/webpack.puck.config.js); it is intentionally excluded from the
+    // React-16 `tsc --noEmit` check.
+    "client/src/components/Puck",
+    "client/src/entrypoints/admin/puck.tsx",
+    "client/src/entrypoints/admin/puck.test.tsx",
+    "client/src/entrypoints/ssr"
   ]
 }

@@ -55,6 +55,8 @@ from wagtail.contrib.forms.models import (
 )
 from wagtail.contrib.forms.panels import FormSubmissionsPanel
 from wagtail.contrib.forms.views import SubmissionsListView
+from wagtail.contrib.puck.fields import PuckField, default_puck_document
+from wagtail.contrib.puck.rendering import render_puck
 from wagtail.contrib.settings.models import (
     BaseGenericSetting,
     BaseSiteSetting,
@@ -2738,3 +2740,18 @@ class CommentableJSONPage(Page):
             ("text", CharBlock()),
         ]
     )
+
+
+class PuckTestPage(Page):
+    puck_body = PuckField(default=default_puck_document, blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel("puck_body"),
+    ]
+
+    template = "tests/puck_test_page.html"
+
+    def get_context(self, request, *args, **kwargs):
+        context = super().get_context(request, *args, **kwargs)
+        context["rendered_puck"] = render_puck(self.puck_body)
+        return context
