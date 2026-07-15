@@ -26,6 +26,16 @@ The Wagtail admin runs on **React 16** (Draftail/Draft.js); Puck needs **React 1
 
 `PuckWidget` renders a hidden input with `data-controller="w-init" data-w-init-event-value="w-puck:init"` plus a sibling `<div data-puck-editor-root>`. The `w-init` Stimulus controller (already in admin core) fires `w-puck:init` on the input; `client/src/entrypoints/admin/puck.tsx` listens for it, mounts Puck with `createRoot`, and on every `onChange` writes `JSON.stringify(data)` back into the input and dispatches a **bubbling `change`** (so `w-unsaved` and form submit/preview pick it up). Do not register a new Stimulus controller and do not use a telepath adapter — both would pull React 18 into the admin's React-16 world.
 
+## The takeover frame
+
+On page create/edit views (`form#page-edit-form` present) the entrypoint mounts a full-viewport **takeover**: `<Puck>` renders our `TakeoverFrame.tsx` as children (Puck's compositional API — `Puck.Components`/`Puck.Fields`/`Puck.Preview`/`Puck.Outline` + `usePuck()`; **no fork of Puck**). Rules that keep it working:
+
+- **Form integrity is the #1 invariant.** The takeover host and the hidden "parking" element are direct children of `form#page-edit-form`, and every relocated Wagtail piece (nav sidebar, title/promote fields, action menu, messages, side panels) is Wagtail's **live DOM `appendChild`ed** into ref'd host divs React treats as opaque. Never re-implement Wagtail fields in React; never let React 18 reconcile inside a reparented node.
+- **Puck remounts the frame once** (its DragDropContext changes shape leaving LOADING status). The `useReparent` cleanup rescues each node into `[data-puck-parking]` (still inside the form) and the next mount re-homes it. Breaking this destroys the reparented nodes.
+- Takeover CSS is scoped to `html[data-puck-takeover]` in `admin-overrides.css`; leftover Wagtail chrome sits under the opaque overlay. Non-Puck admin pages must remain untouched — verify one when changing the CSS.
+- **Autosave races saves**: Wagtail's `w-autosave` posts the form on an interval; a save clicked around that tick can 400 on the revision conflict. Known rough edge (exists in stock Wagtail too); when driving the UI in tests, act well inside the interval.
+- Viewport controls are a canvas max-width toggle, not Puck's zoom/device frames (Puck's internal `<Canvas>` is not exposed compositionally — the one composition limitation found).
+
 ## SSR
 
 `rendering.py` `render_puck(data)` runs `node puck-ssr.js` (stdin JSON → stdout HTML), cached, degrading to `""` if node/bundle absent. `client/src/entrypoints/ssr/puck-ssr.tsx` and the editor both import the same `buildConfig()` from `client/src/components/Puck/config.tsx` — that is the single source of truth for the 13 blocks. Change blocks there, once.

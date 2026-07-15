@@ -8,6 +8,8 @@ This is a Rally Suite addition to the fork; it is not part of upstream Wagtail.
 
 A page's Puck document (`{ "content": [...], "root": {...}, "zones": {...} }`) is stored as an opaque JSON blob in a `PuckField` (a `models.JSONField` subclass). The field renders with `PuckWidget`, a hidden-input widget that a separate React 18 bundle mounts onto — the same pattern Draftail uses. Because the content is a normal model field fed through a Django form, the whole revision/history/revert/preview stack is inherited with **no changes**: a revision snapshots the field like any other, revert re-instantiates the form from a prior revision, and preview round-trips the posted form value.
 
+On page create/edit views the editor **takes over the whole viewport**: a composed Puck frame (built from Puck's compositional API, no fork) whose left icon rail has four sections — **Main** (the real Wagtail nav sidebar, relocated), **Page** (the title and promote fields plus status/checks/history, relocated), **Blocks**, and **Outline** — with Wagtail's Save draft / Publish / Submit-for-moderation action menu relocated to the top left of the frame's header. All relocated pieces are Wagtail's live server-rendered DOM moved (not re-implemented) into the frame while staying inside `<form id="page-edit-form">`, so saving, validation errors, and every Stimulus behavior keep working. Outside a page edit form the widget falls back to an inline mount.
+
 The Puck editor runs on its own **isolated React 18** (the Wagtail admin is on React 16). It is built by `client/webpack.puck.config.js` into two bundles, shipped under this app's `static/wagtailpuck/`:
 
 - `js/puck.js` + `css/puck.css` — the admin editor (browser).

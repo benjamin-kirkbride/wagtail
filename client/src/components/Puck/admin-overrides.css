@@ -1,37 +1,308 @@
 /*
- * Wagtail admin layout overrides for the Puck editor field.
+ * Wagtail admin layout overrides for the Puck editor.
  *
- * Wagtail lays out every form field in a narrow reading column (.w-form-width
- * and .w-field__wrapper cap at 840px) under a labelled, collapsible panel
- * header. That presentation is right for a title or a date — not for a visual
- * page editor, which needs every pixel the content area has. Scoped via :has()
- * so only panels actually containing a Puck editor are affected; on a browser
- * without :has() support this degrades to the narrow default, nothing breaks.
+ * Two modes:
+ *
+ * 1. TAKEOVER (page create/edit views) — scoped to `html[data-puck-takeover]`.
+ *    The Puck editor becomes the whole edit window: a fixed, full-viewport
+ *    overlay (`[data-puck-takeover-root]`, a child of `<form id=page-edit-form>`)
+ *    that re-composes the edit view. Wagtail's real DOM (nav sidebar, title /
+ *    promote fields, save/publish action menu, messages, side panels) is
+ *    reparented into the frame; the leftover Wagtail chrome sits underneath the
+ *    opaque overlay and is scrolled out of the way.
+ *
+ * 2. INLINE (fallback: a Puck widget outside a page edit form) — the old
+ *    behaviour: let the editor field take the full content-area width, drop the
+ *    field-panel chrome. Scoped via :has() so only Puck panels are affected.
  */
 
-/* Let the editor take the full content-area width. */
-.w-form-width:has([data-puck-editor]),
-.w-field__wrapper:has([data-puck-editor]) {
+/* ------------------------------------------------------------------ *
+ * Takeover mode
+ * ------------------------------------------------------------------ */
+
+html[data-puck-takeover],
+html[data-puck-takeover] body {
+  /* The fixed overlay owns the viewport; kill background scroll. */
+  overflow: hidden;
+}
+
+[data-puck-takeover-root] {
+  position: fixed;
+  inset: 0;
+  z-index: 150; /* above admin chrome; below Tippy dropdowns (z-index 9999) */
+  background: var(--w-color-surface-page, #fff);
+}
+
+/* Fill the overlay regardless of Puck's own wrapper heights. */
+.w-puck-takeover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--w-color-text-context, #101010);
+  font-family: var(--w-font-sans, sans-serif);
+}
+
+/* Header --------------------------------------------------------- */
+.w-puck-takeover__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 52px;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  background: var(--w-color-surface-header, #fff);
+}
+
+.w-puck-takeover__header-left,
+.w-puck-takeover__header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* The reparented Wagtail action menu (Save draft split button). */
+.w-puck-takeover__actions .actions,
+.w-puck-takeover__actions .footer__container {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.w-puck-takeover__viewports {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  border-radius: 6px;
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+}
+
+.w-puck-takeover__viewport-btn {
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--w-color-text-label, #52525b);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.w-puck-takeover__viewport-btn[data-active='true'] {
+  background: var(--w-color-surface-page, #fff);
+  color: var(--w-color-text-context, #101010);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Body: rail | panel | canvas | fields --------------------------- */
+.w-puck-takeover__body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+/* Icon rail */
+.w-puck-rail {
+  flex: 0 0 auto;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-right: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  background: var(--w-color-surface-menus, #2e1f5e);
+}
+
+.w-puck-rail__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--w-color-text-button-outline-default, #dcd5f2);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+.w-puck-rail__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.w-puck-rail__btn[data-active='true'] {
+  background: var(--w-color-surface-menu-item-active, rgba(255, 255, 255, 0.15));
+  color: #fff;
+}
+
+.w-puck-rail__icon {
+  display: inline-flex;
+}
+
+/* Panel (active section content) */
+.w-puck-takeover__panel {
+  flex: 0 0 auto;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  background: var(--w-color-surface-page, #fff);
+  overflow: hidden;
+}
+
+.w-puck-takeover__panel-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* Puck's own drawer/outline should not add their own extra frame padding. */
+.w-puck-takeover__panel-section > div {
+  min-width: 0;
+}
+
+/* Canvas */
+.w-puck-takeover__canvas {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--w-color-surface-field-inactive, #f6f6f8);
+}
+
+.w-puck-takeover__canvas-inner {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Puck.Preview fills the canvas. */
+.w-puck-takeover__canvas-inner #puck-preview,
+.w-puck-takeover__canvas-inner [data-puck-preview] {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.w-puck-takeover__messages {
+  flex: 0 0 auto;
+}
+
+.w-puck-takeover__messages .messages {
+  margin: 0;
+}
+
+/* Right-hand fields (selected block props) */
+.w-puck-takeover__fields {
+  flex: 0 0 auto;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  background: var(--w-color-surface-page, #fff);
+  overflow-y: auto;
+}
+
+.w-puck-takeover__fields-title {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--w-color-border-furniture, #e0e0e0);
+}
+
+/* --- Reparented Wagtail DOM: presentation fixes --------------------- */
+
+/* Nav sidebar: present it inline/expanded inside the Main panel instead of the
+   fixed slim rail it normally is. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar,
+[data-puck-takeover] .w-puck-takeover__main #wagtail-sidebar {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  transform: none;
+}
+
+[data-puck-takeover] .w-puck-takeover__main .sidebar__inner {
+  width: 100%;
+}
+
+/* The promote tab panel, reparented, should always show (it was an inactive
+   tab panel). */
+[data-puck-takeover] .w-puck-takeover__page #tab-promote {
+  display: block;
+}
+
+.w-puck-takeover__page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.w-puck-takeover__page-toggles {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.w-puck-takeover__page-fields .w-panel,
+.w-puck-takeover__page-fields .w-panel__content {
+  margin: 0;
+}
+
+/* Side panels reparented into the Page section: show them inline (full width of
+   the panel column) instead of as a fixed-width slide-in drawer. */
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side,
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side--open {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  inset: auto !important;
+  transform: none !important;
+  border: 0;
+}
+
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side__panel {
+  width: 100%;
+  min-width: 0;
+}
+
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side__resize-grip-container,
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side__close-button {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Inline (fallback) mode — unchanged from before.
+ * ------------------------------------------------------------------ */
+
+.w-form-width:has([data-puck-editor]):not([data-puck-takeover] *),
+.w-field__wrapper:has([data-puck-editor]):not([data-puck-takeover] *) {
   max-width: none;
 }
 
-/* The tab content adds 80px reading gutters on each side; slim them so the
-   editor gets the pixels instead. (The ~200px to the left of the content area
-   is the nav sidebar itself — that one is real UI and stays.) */
-.tab-content:has([data-puck-editor]) {
+.tab-content:has([data-puck-editor]):not([data-puck-takeover] *) {
   padding-left: 20px;
   padding-right: 20px;
 }
 
-/* Drop the field-panel chrome (the "Puck body" heading row: label, collapse
-   chevron, comment button). The editor is the page's content surface, not one
-   labelled field among many — the heading is noise and block comments are out
-   of scope for v1 anyway. */
-.w-panel:has([data-puck-editor]) > .w-panel__header {
+.w-panel:has([data-puck-editor]):not([data-puck-takeover] *) > .w-panel__header {
   display: none;
 }
 
-/* The hidden header normally provides the panel's top spacing. */
-.w-panel:has([data-puck-editor]) {
+.w-panel:has([data-puck-editor]):not([data-puck-takeover] *) {
   margin-top: 1rem;
 }

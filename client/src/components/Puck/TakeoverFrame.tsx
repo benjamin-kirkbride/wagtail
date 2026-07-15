@@ -1,0 +1,367 @@
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import type { CSSProperties, ReactNode, RefObject } from 'react';
+import { Puck, usePuck } from '@puckeditor/core';
+
+/**
+ * The Puck "takeover" frame.
+ *
+ * Rendered as `children` of `<Puck>`, so it lives inside all of Puck's context
+ * providers (app store, dnd) — which is why `usePuck()` and the compositional
+ * `Puck.Components` / `Puck.Fields` / `Puck.Preview` / `Puck.Outline` pieces all
+ * work here. We deliberately do NOT use Puck's default `<Layout>` UI; we compose
+ * our own so we can slot in Wagtail's real DOM.
+ *
+ * Wagtail form chrome (the nav sidebar, the title/promote fields, the
+ * save/publish action menu, messages, side panels) is NOT re-implemented in
+ * React. Instead we `appendChild` Wagtail's live, server-rendered DOM nodes into
+ * plain host `<div>`s. A moved node that started inside `<form id=page-edit-form>`
+ * stays inside it (our whole takeover host is a descendant of that form), so it
+ * keeps submitting; its Stimulus controllers reconnect automatically on move.
+ * React must treat these host divs as opaque — we never render children into
+ * them, only `appendChild` in an effect.
+ */
+
+type PanelKey = 'main' | 'page' | 'blocks' | 'outline';
+
+const ICONS: Record<PanelKey, ReactNode> = {
+  main: (
+    // hamburger / main nav
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M3 6h18M3 12h18M3 18h18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  page: (
+    // document
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6 2h8l4 4v16H6z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 2v4h4M9 13h6M9 17h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  blocks: (
+    // grid of blocks
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" />
+      <rect x="14" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" />
+      <rect x="3" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" />
+      <rect x="14" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  ),
+  outline: (
+    // list / tree
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+};
+
+const LABELS: Record<PanelKey, string> = {
+  main: 'Main',
+  page: 'Page',
+  blocks: 'Blocks',
+  outline: 'Outline',
+};
+
+const RAIL_ORDER: PanelKey[] = ['main', 'page', 'blocks', 'outline'];
+
+/**
+ * Reparent a live Wagtail DOM node (found by `selector`) into `ref`'s element.
+ *
+ * Puck remounts our frame once, when its DragDropContext changes shape on
+ * leaving the LOADING status. A naive one-shot appendChild would move the node
+ * into the first-mount host div, which React then discards on remount — taking
+ * the node out of the document for good. So on unmount we rescue the node into
+ * the stable `[data-puck-parking]` element (a hidden child of the form). On the
+ * next mount the same selector finds it (in parking) and moves it into the new
+ * host. The node is never destroyed, and — because parking lives inside the
+ * form — any form-bound fields keep submitting throughout.
+ *
+ * The container and node are captured at setup time (not read from refs during
+ * cleanup, which React may already have nulled).
+ */
+function useReparent(
+  selector: string,
+  ref: RefObject<HTMLElement | null>,
+  after?: (node: HTMLElement) => void,
+) {
+  useEffect(() => {
+    const container = ref.current;
+    const node = document.querySelector<HTMLElement>(selector);
+    if (!container || !node) return undefined;
+    if (!container.contains(node)) {
+      container.appendChild(node);
+      if (after) after(node);
+    }
+    return () => {
+      const parking = document.querySelector<HTMLElement>('[data-puck-parking]');
+      if (parking && node.parentElement !== parking) {
+        parking.appendChild(node);
+      }
+    };
+    // Selector is a stable literal per call site; run once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
+function UndoRedo() {
+  const { history } = usePuck();
+  const btn: CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    border: 'none',
+    background: 'transparent',
+    color: 'inherit',
+    borderRadius: 4,
+    cursor: 'pointer',
+  };
+  const disabled: CSSProperties = { opacity: 0.35, cursor: 'default' };
+  return (
+    <div style={{ display: 'inline-flex', gap: 2 }}>
+      <button
+        type="button"
+        title="Undo"
+        aria-label="Undo"
+        onClick={() => history.back?.()}
+        disabled={!history.hasPast}
+        style={history.hasPast ? btn : { ...btn, ...disabled }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M9 14L4 9l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M4 9h11a5 5 0 0 1 0 10h-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        title="Redo"
+        aria-label="Redo"
+        onClick={() => history.forward?.()}
+        disabled={!history.hasFuture}
+        style={history.hasFuture ? btn : { ...btn, ...disabled }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M15 14l5-5-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M20 9H9a5 5 0 0 0 0 10h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+const VIEWPORTS: { key: string; label: string; width: number | null }[] = [
+  { key: 'mobile', label: 'Mobile', width: 375 },
+  { key: 'tablet', label: 'Tablet', width: 768 },
+  { key: 'full', label: 'Full width', width: null },
+];
+
+export function TakeoverFrame() {
+  const [active, setActive] = useState<PanelKey>('page');
+  const [viewport, setViewport] = useState<string>('full');
+
+  // Wagtail page edit/history live at /admin/pages/<id>/edit|add/... — derive the
+  // history URL from the edit URL. Only pages (not create views) have history.
+  const historyHref = (() => {
+    const m = window.location.pathname.match(/\/admin\/pages\/(\d+)\/edit\//);
+    return m ? `/admin/pages/${m[1]}/history/` : null;
+  })();
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const pageToolbarRef = useRef<HTMLDivElement>(null);
+  const pagePanelsRef = useRef<HTMLDivElement>(null);
+  const headerActionsRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+
+  // Reparent Wagtail's live DOM into our host divs. Order/grouping mirrors the
+  // rail sections. See useReparent for the remount-survival mechanism.
+
+  // Left rail "Main": the whole Wagtail nav sidebar (its own React 16 app).
+  useReparent('aside#wagtail-sidebar', mainRef);
+
+  // Header (top-left): Wagtail's real Save-draft split button + dropdown. The
+  // footer action menu lives inside the form, so moving it keeps submit intact.
+  // Location-independent selector: once parked (see useReparent), this node no
+  // longer lives under footer.footer, so match it by its own classes instead.
+  useReparent('nav.actions--primary', headerActionsRef);
+
+  // The tab bar is hidden in takeover, and we move the promote panel out of the
+  // tabs below. Remove the now-orphaned promote tab trigger first, so the
+  // `w-tabs` controller doesn't error validating a trigger whose panel is gone.
+  useEffect(() => {
+    document
+      .querySelector('[data-w-tabs-target="trigger"][aria-controls="tab-promote"]')
+      ?.remove();
+  }, []);
+
+  // Left rail "Page": title field + promote-tab fields.
+  useReparent('#panel-child-content-title-section', pageRef);
+  useReparent('#tab-promote', pageRef, (node) => {
+    // It was a hidden (inactive) tab panel; now it's always shown.
+    node.removeAttribute('hidden');
+  });
+
+  // Side-panel toggles (status / checks / comments / preview). sidePanel.js
+  // binds these document-globally, so they keep working after the move.
+  useReparent('[data-side-panel-toggle="status"]', pageToolbarRef);
+  useReparent('[data-side-panel-toggle="checks"]', pageToolbarRef);
+  useReparent('[data-side-panel-toggle="comments"]', pageToolbarRef);
+  // The panels themselves (status includes the history summary + link).
+  useReparent('[data-form-side]', pagePanelsRef);
+
+  // Messages / banners (save success, validation errors).
+  useReparent('.messages', messagesRef);
+
+  const railButton = useCallback(
+    (key: PanelKey) => {
+      const isActive = active === key;
+      return (
+        <button
+          key={key}
+          type="button"
+          title={LABELS[key]}
+          aria-pressed={isActive}
+          onClick={() => setActive(key)}
+          className="w-puck-rail__btn"
+          data-active={isActive ? 'true' : undefined}
+        >
+          <span className="w-puck-rail__icon">{ICONS[key]}</span>
+          <span className="w-puck-rail__label">{LABELS[key]}</span>
+        </button>
+      );
+    },
+    [active],
+  );
+
+  const activeWidth = VIEWPORTS.find((v) => v.key === viewport)?.width ?? null;
+
+  return (
+    <div className="w-puck-takeover">
+      {/* Header */}
+      <div className="w-puck-takeover__header">
+        <div className="w-puck-takeover__header-left">
+          <div ref={headerActionsRef} className="w-puck-takeover__actions" />
+        </div>
+        <div className="w-puck-takeover__header-right">
+          <UndoRedo />
+          <div className="w-puck-takeover__viewports">
+            {VIEWPORTS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                title={v.label}
+                aria-pressed={viewport === v.key}
+                data-active={viewport === v.key ? 'true' : undefined}
+                onClick={() => setViewport(v.key)}
+                className="w-puck-takeover__viewport-btn"
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Body: rail | panel | canvas | fields */}
+      <div className="w-puck-takeover__body">
+        <nav className="w-puck-rail" aria-label="Editor sections">
+          {RAIL_ORDER.map(railButton)}
+        </nav>
+
+        <div className="w-puck-takeover__panel" data-panel={active}>
+          {/* Main — reparented Wagtail nav sidebar */}
+          <div
+            className="w-puck-takeover__panel-section"
+            hidden={active !== 'main'}
+          >
+            <div ref={mainRef} className="w-puck-takeover__main" />
+          </div>
+
+          {/* Page — reparented title + promote + side panels */}
+          <div
+            className="w-puck-takeover__panel-section w-puck-takeover__page"
+            hidden={active !== 'page'}
+          >
+            <div className="w-puck-takeover__page-toolbar">
+              <div ref={pageToolbarRef} className="w-puck-takeover__page-toggles" />
+              {historyHref && (
+                <a
+                  className="button button-small button-secondary"
+                  href={historyHref}
+                >
+                  History
+                </a>
+              )}
+            </div>
+            {/* Side-panel content (status / checks) appears right under the
+                toggles when opened; the editable fields follow below. */}
+            <div ref={pagePanelsRef} className="w-puck-takeover__page-panels" />
+            <div ref={pageRef} className="w-puck-takeover__page-fields" />
+          </div>
+
+          {/* Blocks — Puck's component drawer */}
+          <div
+            className="w-puck-takeover__panel-section"
+            hidden={active !== 'blocks'}
+          >
+            <Puck.Components />
+          </div>
+
+          {/* Outline — Puck's layer tree */}
+          <div
+            className="w-puck-takeover__panel-section"
+            hidden={active !== 'outline'}
+          >
+            <Puck.Outline />
+          </div>
+        </div>
+
+        <div className="w-puck-takeover__canvas">
+          <div ref={messagesRef} className="w-puck-takeover__messages" />
+          <div
+            className="w-puck-takeover__canvas-inner"
+            style={
+              activeWidth
+                ? { maxWidth: activeWidth, margin: '0 auto', width: '100%' }
+                : undefined
+            }
+          >
+            <Puck.Preview />
+          </div>
+        </div>
+
+        <div className="w-puck-takeover__fields">
+          <div className="w-puck-takeover__fields-title">Properties</div>
+          <Puck.Fields />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default TakeoverFrame;
