@@ -1,4 +1,5 @@
 import path from 'path';
+import webpack from 'webpack';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 
@@ -77,6 +78,18 @@ export default function exports(env, argv) {
     },
   };
 
+  // Each bundle must be a single file. Puck lazy-loads parts of itself
+  // (tiptap/RichText, its Editor/Render shells) via dynamic import(), and
+  // webpack would emit those as async chunks whose runtime URL is
+  // publicPath + the source-tree output prefix — a path Django's staticfiles
+  // never serves (it strips everything above the app's static/ dir). The
+  // editor then dies at mount with ChunkLoadError as soon as a document
+  // contains a lazy-loaded block (e.g. RichText); an empty document mounts
+  // fine, which is exactly how this slipped past initial verification.
+  const singleFile = new webpack.optimize.LimitChunkCountPlugin({
+    maxChunks: 1,
+  });
+
   // Browser bundle: the Puck editor, mounted in the Wagtail admin.
   const editor = {
     ...common,
@@ -102,6 +115,7 @@ export default function exports(env, argv) {
     },
     plugins: [
       new MiniCssExtractPlugin({ filename: path.join(OUT, 'css', '[name].css') }),
+      singleFile,
     ],
   };
 
@@ -124,6 +138,9 @@ export default function exports(env, argv) {
         { test: /\.css$/, type: 'asset/source' },
       ],
     },
+    // Single file for the node bundle too: rendering.py invokes one
+    // BUNDLE_PATH, and the wheel should not depend on sibling chunk files.
+    plugins: [singleFile],
   };
 
   return [editor, ssr];
