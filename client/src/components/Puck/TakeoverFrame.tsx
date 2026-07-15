@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { CSSProperties, ReactNode, RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { Puck, usePuck } from '@puckeditor/core';
 
 /**
@@ -129,30 +129,17 @@ function useReparent(
 
 function UndoRedo() {
   const { history } = usePuck();
-  const btn: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    border: 'none',
-    background: 'transparent',
-    color: 'inherit',
-    borderRadius: 4,
-    cursor: 'pointer',
-  };
-  const disabled: CSSProperties = { opacity: 0.35, cursor: 'default' };
   return (
-    <div style={{ display: 'inline-flex', gap: 2 }}>
+    <div className="w-puck-undo-redo">
       <button
         type="button"
         title="Undo"
         aria-label="Undo"
+        className="w-puck-undo-redo__btn"
         onClick={() => history.back?.()}
         disabled={!history.hasPast}
-        style={history.hasPast ? btn : { ...btn, ...disabled }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M9 14L4 9l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M4 9h11a5 5 0 0 1 0 10h-1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -161,11 +148,11 @@ function UndoRedo() {
         type="button"
         title="Redo"
         aria-label="Redo"
+        className="w-puck-undo-redo__btn"
         onClick={() => history.forward?.()}
         disabled={!history.hasFuture}
-        style={history.hasFuture ? btn : { ...btn, ...disabled }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M15 14l5-5-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M20 9H9a5 5 0 0 0 0 10h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -193,6 +180,7 @@ export function TakeoverFrame() {
 
   const mainRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  const promoteRef = useRef<HTMLDivElement>(null);
   const pageToolbarRef = useRef<HTMLDivElement>(null);
   const pagePanelsRef = useRef<HTMLDivElement>(null);
   const headerActionsRef = useRef<HTMLDivElement>(null);
@@ -219,9 +207,12 @@ export function TakeoverFrame() {
       ?.remove();
   }, []);
 
-  // Left rail "Page": title field + promote-tab fields.
+  // Left rail "Page": title field goes under a "Title" heading; the promote-tab
+  // fields go under a "Promote" heading in their own host, so the SEO fields are
+  // clearly separated from the page title (headings are frame-rendered around
+  // the reparented hosts — we never inject DOM into the Wagtail nodes).
   useReparent('#panel-child-content-title-section', pageRef);
-  useReparent('#tab-promote', pageRef, (node) => {
+  useReparent('#tab-promote', promoteRef, (node) => {
     // It was a hidden (inactive) tab panel; now it's always shown.
     node.removeAttribute('hidden');
   });
@@ -236,6 +227,37 @@ export function TakeoverFrame() {
 
   // Messages / banners (save success, validation errors).
   useReparent('.messages', messagesRef);
+
+  // Keep the page canvas rendering as the published (light) page even when the
+  // admin is in dark mode. Puck renders the preview in an <iframe> that clones
+  // the admin document's <html> attributes — including `w-theme-dark` — so the
+  // injected admin CSS otherwise paints the page with dark-theme text colours.
+  // The canvas represents the live page, so we relabel just that iframe's root
+  // to the light theme (Wagtail's own light tokens then apply). This touches
+  // only Puck's isolated preview document, never a reparented Wagtail node.
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>('[data-puck-takeover-root]');
+    if (!root) return undefined;
+    const forceLight = () => {
+      const iframe = root.querySelector<HTMLIFrameElement>(
+        '.w-puck-takeover__canvas iframe',
+      );
+      const html = iframe?.contentDocument?.documentElement;
+      if (!html || !html.classList.contains('w-theme-dark')) return;
+      html.classList.remove('w-theme-dark', 'w-theme-system');
+      html.classList.add('w-theme-light');
+    };
+    forceLight();
+    // The iframe's document swaps in asynchronously after mount; re-assert for a
+    // short window until it's present, then stop.
+    const interval = window.setInterval(forceLight, 300);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 6000);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const railButton = useCallback(
     (key: PanelKey) => {
@@ -321,7 +343,10 @@ export function TakeoverFrame() {
             {/* Side-panel content (status / checks) appears right under the
                 toggles when opened; the editable fields follow below. */}
             <div ref={pagePanelsRef} className="w-puck-takeover__page-panels" />
+            <h3 className="w-puck-section-heading">Title</h3>
             <div ref={pageRef} className="w-puck-takeover__page-fields" />
+            <h3 className="w-puck-section-heading">Promote</h3>
+            <div ref={promoteRef} className="w-puck-takeover__page-fields" />
           </div>
 
           {/* Blocks — Puck's component drawer */}

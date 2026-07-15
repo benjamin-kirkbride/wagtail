@@ -172,6 +172,32 @@ describe('PuckEditor takeover frame', () => {
     expect(document.querySelector('#page-edit-form #id_slug')).toBeInTheDocument();
   });
 
+  it('renders Title and Promote section headings in the Page section', () => {
+    const host = setupWagtailDom();
+    render(<PuckEditor initialData={defaultData} onChange={jest.fn()} />, {
+      container: host,
+    });
+    const headings = [
+      ...document.querySelectorAll('.w-puck-takeover__page .w-puck-section-heading'),
+    ].map((h) => h.textContent);
+    expect(headings).toEqual(['Title', 'Promote']);
+  });
+
+  it('separates the title and promote fields into their own hosts', () => {
+    const host = setupWagtailDom();
+    render(<PuckEditor initialData={defaultData} onChange={jest.fn()} />, {
+      container: host,
+    });
+    // Title panel sits under the first (Title) fields host; the promote panel
+    // under the second (Promote) fields host — not lumped together.
+    const fieldHosts = document.querySelectorAll(
+      '.w-puck-takeover__page .w-puck-takeover__page-fields',
+    );
+    expect(fieldHosts).toHaveLength(2);
+    expect(fieldHosts[0].querySelector('#panel-child-content-title-section')).toBeInTheDocument();
+    expect(fieldHosts[1].querySelector('#tab-promote')).toBeInTheDocument();
+  });
+
   it('removes the orphaned promote tab trigger so w-tabs will not error', () => {
     const host = setupWagtailDom();
     render(<PuckEditor initialData={defaultData} onChange={jest.fn()} />, {

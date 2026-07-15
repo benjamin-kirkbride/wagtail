@@ -72,6 +72,39 @@ html[data-puck-takeover] body {
   align-items: center;
 }
 
+/* Undo / redo icon buttons. Sized as proper icon buttons (36px), consistent
+   with the Save-draft button height, with a visible disabled state. */
+.w-puck-undo-redo {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.w-puck-undo-redo__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  border-radius: 6px;
+  background: var(--w-color-surface-field, #fff);
+  color: var(--w-color-text-context, #101010);
+  cursor: pointer;
+}
+
+.w-puck-undo-redo__btn:hover:not(:disabled) {
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+  border-color: var(--w-color-border-field-hover, #b7b7b7);
+}
+
+.w-puck-undo-redo__btn:disabled {
+  color: var(--w-color-text-placeholder, #a0a0a0);
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+  cursor: default;
+  opacity: 0.6;
+}
+
 .w-puck-takeover__viewports {
   display: inline-flex;
   gap: 2px;
@@ -236,6 +269,64 @@ html[data-puck-takeover] body {
   width: 100%;
 }
 
+/* Bug 3: the relocated nav renders permanently expanded, so its collapse /
+   un-expand toggle (top-right of the sidebar) is inert noise here — hide it.
+   Only in takeover; the normal admin sidebar keeps its toggle. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar__collapse-toggle,
+[data-puck-takeover] .w-puck-takeover__main .sidebar-nav-toggle {
+  display: none;
+}
+
+/* Bug 1: sub-menus (Pages, Reports, Settings, Help…) normally fly out as a
+   fixed, full-height panel slid off to the side — invisible/clipped inside the
+   panel column. Force the open one to render vertically in place (accordion),
+   like the account menu at the sidebar's bottom.
+
+   Each `.sidebar-panel` is a descendant of its trigger's <li>, so once we drop
+   its fixed positioning it flows in right under the trigger. Closed panels are
+   pulled out of the flow entirely so they add no phantom gaps. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar-panel {
+  display: none;
+}
+
+[data-puck-takeover] .w-puck-takeover__main .sidebar-panel--visible,
+[data-puck-takeover] .w-puck-takeover__main .sidebar-panel--open {
+  display: flex;
+  position: static;
+  inset: auto;
+  inset-inline-start: auto;
+  transform: none;
+  width: 100%;
+  height: auto;
+  z-index: auto;
+  visibility: visible;
+  box-shadow: none;
+}
+
+/* The inner panel carries a fixed menu-width and 100vh height; make it fill the
+   column and size to content. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar-sub-menu-panel,
+[data-puck-takeover] .w-puck-takeover__main .sidebar-sub-menu-panel > h2,
+[data-puck-takeover] .w-puck-takeover__main .sidebar-sub-menu-panel > ul,
+[data-puck-takeover] .w-puck-takeover__main .sidebar-sub-menu-panel__list {
+  width: 100%;
+  height: auto;
+}
+
+/* The submenu's big centred title reserves ~180px of vertical space to align
+   with the slim rail — pointless in accordion mode, so collapse it to a normal
+   section header. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar-sub-menu-panel > h2 {
+  min-height: 0;
+  padding-top: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+/* The submenu's own close (X) button is redundant — the trigger toggles it. */
+[data-puck-takeover] .w-puck-takeover__main .sidebar-close-menu-button {
+  display: none;
+}
+
 /* The promote tab panel, reparented, should always show (it was an inactive
    tab panel). */
 [data-puck-takeover] .w-puck-takeover__page #tab-promote {
@@ -256,9 +347,65 @@ html[data-puck-takeover] body {
   gap: 2px;
 }
 
-.w-puck-takeover__page-fields .w-panel,
-.w-puck-takeover__page-fields .w-panel__content {
+/* Bug 4: frame-rendered section headings around the reparented Page hosts
+   (Title / Promote), styled as small-caps section labels per admin convention. */
+.w-puck-section-heading {
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--w-color-text-label, #52525b);
+  border-bottom: 1px solid var(--w-color-border-furniture, #e0e0e0);
+}
+
+/* A little breathing room between the Title block and the Promote heading. */
+.w-puck-takeover__page .w-puck-section-heading + .w-puck-takeover__page-fields {
+  margin-bottom: 20px;
+}
+
+/* Bug 5: the reparented Wagtail panels carry their edit-view margins/padding
+   into the narrow panel column. Flatten them to the column's own 12px rhythm so
+   content sits flush and consistent. */
+.w-puck-takeover__page-fields > .w-panel,
+.w-puck-takeover__page-fields .w-panel__content,
+.w-puck-takeover__page-fields .w-panel__wrapper {
   margin: 0;
+  padding: 0;
+}
+
+/* The title panel keeps a header ("Title") of its own — we supply our own
+   section heading, so drop the built-in one to avoid a double heading. */
+[data-puck-takeover] .w-puck-takeover__page #panel-child-content-title-section
+  > .w-panel__header {
+  display: none;
+}
+
+/* Wagtail pulls panel headers left by ~64px to seat the "#" anchor icon in a
+   gutter that doesn't exist in the narrow column — that clips the heading text.
+   Reset the offset and drop the (useless-here) anchor link so headings align to
+   the column. */
+[data-puck-takeover] .w-puck-takeover__page .w-panel__header {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+[data-puck-takeover] .w-puck-takeover__page .w-panel__anchor {
+  display: none;
+}
+
+/* Promote sub-headings ("For search engines", "For site menus"): give them
+   clear hierarchy and spacing beneath the section heading. */
+[data-puck-takeover] .w-puck-takeover__page #tab-promote .w-panel__heading {
+  margin: 0 0 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--w-color-text-context, #101010);
+}
+
+[data-puck-takeover] .w-puck-takeover__page #tab-promote .w-panel + .w-panel {
+  margin-top: 20px;
 }
 
 /* Side panels reparented into the Page section: show them inline (full width of
@@ -278,11 +425,153 @@ html[data-puck-takeover] body {
 [data-puck-takeover] .w-puck-takeover__page-panels .form-side__panel {
   width: 100%;
   min-width: 0;
+  padding: 0;
+}
+
+/* Drop the drawer's inner scroll/gutter padding so the status/checks content
+   lines up with the column's 12px rhythm instead of floating in wide margins. */
+[data-puck-takeover] .w-puck-takeover__page-panels .form-side__panel > * {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+[data-puck-takeover] .w-puck-takeover__page-panels [data-side-panel] {
+  padding: 0;
+}
+
+[data-puck-takeover] .w-puck-takeover__page-panels .w-panel {
+  margin: 0 0 12px;
 }
 
 [data-puck-takeover] .w-puck-takeover__page-panels .form-side__resize-grip-container,
 [data-puck-takeover] .w-puck-takeover__page-panels .form-side__close-button {
   display: none;
+}
+
+/* Messages/banners reparented above the canvas: normalise their spacing. */
+.w-puck-takeover__messages .messages {
+  margin: 0;
+}
+
+.w-puck-takeover__messages .messages li {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dark theme (bug 2)
+ *
+ * Puck's own UI (icon rail chrome, drawer, outline, fields sidebar, header)
+ * ships a light-only palette via `--puck-color-*` custom properties. In
+ * Wagtail's dark theme that renders light-on-light. We remap those properties
+ * to Wagtail's dark palette (`--w-color-*`), so Puck's chrome matches the rest
+ * of the takeover — whose own CSS already uses `--w-color-*` and adapts for
+ * free. We override the *primitives* (grey ramp, white/black, azure accent) and
+ * let Puck's semantic tokens (surface/text/border/interactive…) recompute.
+ *
+ * Wagtail flags dark mode with `.w-theme-dark` on <html>, or `.w-theme-system`
+ * under `@media (prefers-color-scheme: dark)` — we cover both. The page canvas
+ * itself stays light (it represents the published page); only the chrome flips.
+ * ------------------------------------------------------------------ */
+
+/* NOTE: Puck's *semantic* tokens (surface/text/border/interactive…) are declared
+   on :root as `var(--puck-color-<primitive>)`. Custom properties resolve their
+   var() substitutions at the declaring element, so descendants inherit the
+   already-resolved (light) value — overriding the primitives lower down does NOT
+   flow through. We therefore remap the semantic tokens *directly* here (Puck's
+   UI uses the semantic tokens, not the raw primitives). Values come from
+   Wagtail's palette (`--w-color-*`), which is identical in light/dark; only our
+   scoped selector decides when they apply. */
+html[data-puck-takeover].w-theme-dark .w-puck-takeover {
+  /* Surfaces: dark panels matching the frame chrome (surface-page = grey-600). */
+  --puck-color-surface: var(--w-color-grey-600);
+  --puck-color-surface-muted: var(--w-color-grey-700);
+  --puck-color-surface-subtle: var(--w-color-grey-700);
+  --puck-color-surface-inverse: var(--w-color-grey-50);
+  /* Text: light on dark; inverse text is dark (for light inverse surfaces). */
+  --puck-color-text: var(--w-color-grey-50);
+  --puck-color-text-muted: var(--w-color-grey-200);
+  --puck-color-text-secondary: var(--w-color-grey-150);
+  --puck-color-text-subtle: var(--w-color-grey-400);
+  --puck-color-text-disabled: var(--w-color-grey-400);
+  --puck-color-text-inverse: var(--w-color-grey-800);
+  /* Borders: visible on the dark surface. */
+  --puck-color-border: var(--w-color-grey-500);
+  --puck-color-border-muted: var(--w-color-grey-500);
+  --puck-color-border-hover: var(--w-color-grey-400);
+  --puck-color-border-inverse: var(--w-color-grey-400);
+  /* Accent + interactive states: Wagtail secondary blues for solids, dark greys
+     for the "soft"/neutral hover backgrounds. */
+  --puck-color-interactive: var(--w-color-secondary-100);
+  --puck-color-interactive-hover: var(--w-color-secondary-75);
+  --puck-color-interactive-active: var(--w-color-secondary-50);
+  --puck-color-interactive-inverse-hover: var(--w-color-secondary-400);
+  --puck-color-interactive-inverse-active: var(--w-color-secondary-600);
+  --puck-color-interactive-neutral-hover: var(--w-color-grey-500);
+  --puck-color-interactive-subtle: var(--w-color-grey-700);
+  --puck-color-interactive-soft: var(--w-color-grey-700);
+  --puck-color-interactive-soft-hover: var(--w-color-grey-500);
+  --puck-color-focus-ring: var(--w-color-secondary-100);
+  --puck-color-selection-border: var(--w-color-secondary-100);
+  --puck-color-selection-bg: color-mix(in srgb, var(--w-color-secondary) 30%, transparent);
+  --puck-color-highlight: var(--w-color-secondary-100);
+  --puck-color-bg-disabled: var(--w-color-grey-500);
+  /* Keep the modal/drawer backdrop dark. */
+  --puck-color-overlay-backdrop: color-mix(in srgb, #000 75%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-puck-takeover].w-theme-system .w-puck-takeover {
+    --puck-color-surface: var(--w-color-grey-600);
+    --puck-color-surface-muted: var(--w-color-grey-700);
+    --puck-color-surface-subtle: var(--w-color-grey-700);
+    --puck-color-surface-inverse: var(--w-color-grey-50);
+    --puck-color-text: var(--w-color-grey-50);
+    --puck-color-text-muted: var(--w-color-grey-200);
+    --puck-color-text-secondary: var(--w-color-grey-150);
+    --puck-color-text-subtle: var(--w-color-grey-400);
+    --puck-color-text-disabled: var(--w-color-grey-400);
+    --puck-color-text-inverse: var(--w-color-grey-800);
+    --puck-color-border: var(--w-color-grey-500);
+    --puck-color-border-muted: var(--w-color-grey-500);
+    --puck-color-border-hover: var(--w-color-grey-400);
+    --puck-color-border-inverse: var(--w-color-grey-400);
+    --puck-color-interactive: var(--w-color-secondary-100);
+    --puck-color-interactive-hover: var(--w-color-secondary-75);
+    --puck-color-interactive-active: var(--w-color-secondary-50);
+    --puck-color-interactive-inverse-hover: var(--w-color-secondary-400);
+    --puck-color-interactive-inverse-active: var(--w-color-secondary-600);
+    --puck-color-interactive-neutral-hover: var(--w-color-grey-500);
+    --puck-color-interactive-subtle: var(--w-color-grey-700);
+    --puck-color-interactive-soft: var(--w-color-grey-700);
+    --puck-color-interactive-soft-hover: var(--w-color-grey-500);
+    --puck-color-focus-ring: var(--w-color-secondary-100);
+    --puck-color-selection-border: var(--w-color-secondary-100);
+    --puck-color-selection-bg: color-mix(in srgb, var(--w-color-secondary) 30%, transparent);
+    --puck-color-highlight: var(--w-color-secondary-100);
+    --puck-color-bg-disabled: var(--w-color-grey-500);
+    --puck-color-overlay-backdrop: color-mix(in srgb, #000 75%, transparent);
+  }
+}
+
+/* The page canvas represents the published page — keep it light in both themes,
+   regardless of the dark chrome around it. */
+[data-puck-takeover] .w-puck-takeover__canvas-inner #puck-preview,
+[data-puck-takeover] .w-puck-takeover__canvas-inner [data-puck-preview] {
+  background: #fff;
+}
+
+/* Puck renders the page inside an <iframe> that inherits the admin document's
+   <html> attributes (including `w-theme-dark` + `data-puck-takeover`), so it
+   otherwise picks up the admin's dark color-scheme and paints a black canvas
+   with light UA text. This same stylesheet is injected into that iframe. The
+   iframe body holds the page content but never our frame wrapper, so a takeover
+   document that does NOT contain `.w-puck-takeover` is exactly the preview
+   iframe — pin it to a light scheme + white background so the page renders like
+   the published page. (The parent admin document DOES contain `.w-puck-takeover`
+   and is excluded, so the surrounding dark chrome is untouched.) */
+html[data-puck-takeover]:not(:has(.w-puck-takeover)) {
+  color-scheme: light;
+  background-color: #fff;
 }
 
 /* ------------------------------------------------------------------ *
