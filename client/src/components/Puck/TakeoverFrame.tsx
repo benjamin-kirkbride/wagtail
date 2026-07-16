@@ -238,24 +238,59 @@ export function TakeoverFrame() {
   useEffect(() => {
     const root = document.querySelector<HTMLElement>('[data-puck-takeover-root]');
     if (!root) return undefined;
-    const forceLight = () => {
-      const iframe = root.querySelector<HTMLIFrameElement>(
-        '.w-puck-takeover__canvas iframe',
-      );
-      const html = iframe?.contentDocument?.documentElement;
-      if (!html || !html.classList.contains('w-theme-dark')) return;
-      html.classList.remove('w-theme-dark', 'w-theme-system');
-      html.classList.add('w-theme-light');
+
+    const cleanups: Array<() => void> = [];
+    const observedRoots = new WeakSet<HTMLElement>();
+    const watchedIframes = new WeakSet<HTMLIFrameElement>();
+
+    // Strip BOTH dark-capable classes: `w-theme-dark` applies dark tokens
+    // directly, and `w-theme-system` applies them through a
+    // `prefers-color-scheme: dark` media query — leaving it in place made the
+    // canvas render light-grey-on-white for system-theme users on a dark OS.
+    const relabel = (html: HTMLElement) => {
+      if (
+        html.classList.contains('w-theme-dark') ||
+        html.classList.contains('w-theme-system')
+      ) {
+        html.classList.remove('w-theme-dark', 'w-theme-system');
+        html.classList.add('w-theme-light');
+      }
     };
-    forceLight();
-    // The iframe's document swaps in asynchronously after mount; re-assert for a
-    // short window until it's present, then stop.
-    const interval = window.setInterval(forceLight, 300);
-    const stop = window.setTimeout(() => window.clearInterval(interval), 6000);
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(stop);
+
+    const adoptDocument = (iframe: HTMLIFrameElement) => {
+      const html = iframe.contentDocument?.documentElement;
+      if (!html || observedRoots.has(html)) return;
+      observedRoots.add(html);
+      relabel(html);
+      // AutoFrame re-syncs the cloned <html> attributes from the parent, which
+      // can restore the theme class after we strip it — keep re-asserting.
+      const mo = new MutationObserver(() => relabel(html));
+      mo.observe(html, { attributes: true, attributeFilter: ['class'] });
+      cleanups.push(() => mo.disconnect());
     };
+
+    const watchIframe = (iframe: HTMLIFrameElement) => {
+      if (watchedIframes.has(iframe)) return;
+      watchedIframes.add(iframe);
+      adoptDocument(iframe);
+      const onLoad = () => adoptDocument(iframe);
+      iframe.addEventListener('load', onLoad);
+      cleanups.push(() => iframe.removeEventListener('load', onLoad));
+    };
+
+    const scan = () => {
+      root
+        .querySelectorAll<HTMLIFrameElement>('.w-puck-takeover__canvas iframe')
+        .forEach(watchIframe);
+    };
+    scan();
+    // Puck can recreate the preview iframe (remounts, viewport changes); watch
+    // the frame subtree so replacements are adopted too.
+    const treeObserver = new MutationObserver(scan);
+    treeObserver.observe(root, { childList: true, subtree: true });
+    cleanups.push(() => treeObserver.disconnect());
+
+    return () => cleanups.forEach((fn) => fn());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
