@@ -45,8 +45,9 @@ const fontSizes: Record<HeadingSize, string> = {
 const HeadingInternal: ComponentConfig<HeadingProps> = {
   fields: {
     text: {
-      type: 'textarea',
-      contentEditable: true,
+      // No contentEditable — overlay portals break in the takeover frame, see
+      // Hero.tsx. (Demo uses textarea; text is fine for a heading.)
+      type: 'text',
     },
     size: {
       type: 'select',

@@ -15,8 +15,9 @@ export type TextProps = WithLayout<{
 const TextInner: ComponentConfig<TextProps> = {
   fields: {
     text: {
+      // No contentEditable — overlay portals break in the takeover frame, see
+      // Hero.tsx.
       type: 'textarea',
-      contentEditable: true,
     },
     size: {
       type: 'select',

@@ -27,11 +27,9 @@ export const Stats: ComponentConfig<StatsProps> = {
       arrayFields: {
         title: {
           type: 'text',
-          contentEditable: true,
         },
         description: {
           type: 'text',
-          contentEditable: true,
         },
       },
     },

@@ -27,15 +27,21 @@ export type HeroProps = {
 
 export const Hero: ComponentConfig<HeroProps> = {
   fields: {
-    title: { type: 'text', contentEditable: true },
-    description: { type: 'textarea', contentEditable: true },
+    // No `contentEditable: true` on ANY field in this config: Puck renders
+    // inline-editable props through overlay-portal spans backed by its
+    // internal <Canvas> layer, which is not part of the compositional API our
+    // takeover frame is built from — so those spans render empty after any
+    // prop change (the block's text "disappears" in the canvas while the data
+    // stays intact). All text is edited via the fields sidebar instead.
+    title: { type: 'text' },
+    description: { type: 'textarea' },
     buttons: {
       type: 'array',
       min: 1,
       max: 4,
       getItemSummary: (item) => item.label || 'Button',
       arrayFields: {
-        label: { type: 'text', contentEditable: true },
+        label: { type: 'text' },
         href: { type: 'text' },
         variant: {
           type: 'select',

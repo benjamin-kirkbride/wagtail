@@ -13,7 +13,6 @@ export const Button: ComponentConfig<ButtonProps> = {
     label: {
       type: 'text',
       placeholder: 'Lorem ipsum...',
-      contentEditable: true,
     },
     href: { type: 'text' },
     variant: {

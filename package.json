@@ -212,6 +212,7 @@
     "uuid": "^11.1.0"
   },
   "scripts": {
+    "postinstall": "node ./scripts/patch-puck.mjs",
     "start": "webpack --config ./client/webpack.config.js --mode development --progress --watch",
     "start:puck": "webpack --config ./client/webpack.puck.config.js --mode development --watch",
     "build": "webpack --config ./client/webpack.config.js --mode production && npm run build:puck",

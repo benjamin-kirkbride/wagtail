@@ -72,11 +72,11 @@ const CardInner: ComponentConfig<CardProps> = {
   fields: {
     title: {
       type: 'text',
-      contentEditable: true,
     },
     description: {
+      // No contentEditable — overlay portals break in the takeover frame, see
+      // Hero.tsx.
       type: 'textarea',
-      contentEditable: true,
     },
     icon: {
       type: 'select',
