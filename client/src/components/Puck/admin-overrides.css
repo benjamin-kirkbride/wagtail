@@ -33,6 +33,24 @@ html[data-puck-takeover] body {
   background: var(--w-color-surface-page, #fff);
 }
 
+/* Puck's own root wrapper (`.Puck`, `id={instanceId}`) must fill the overlay.
+ *
+ * By default it lays out in normal flow, and because our `.w-puck-takeover`
+ * child below is absolutely positioned, `.Puck` collapses to height:0. That is
+ * not merely cosmetic: Puck's drag collision engine (NestedDroppablePlugin)
+ * gates EVERY collision update on the drag pointer being over an element whose
+ * `id === instanceId` — i.e. this very `.Puck` div (`elementsFromPoint(...).some(
+ * el => el.id === instanceId)`). A 0-height box is never under the canvas
+ * pointer, so collisions never resolve: dragging a block from the drawer starts
+ * (an overlay/`data-puck-dragging` appears) but no drop preview is ever computed
+ * and nothing is inserted, reordered, or dropped. Filling the overlay makes
+ * `.Puck` geometrically cover the canvas (and become the containing block for
+ * the absolute takeover), restoring drag-and-drop. */
+html[data-puck-takeover] .Puck {
+  position: absolute;
+  inset: 0;
+}
+
 /* Fill the overlay regardless of Puck's own wrapper heights. */
 .w-puck-takeover {
   position: absolute;
