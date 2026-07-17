@@ -9,6 +9,10 @@ export type StatsProps = {
 };
 
 export const Stats: ComponentConfig<StatsProps> = {
+  // `inline` + `puck.dragRef` on the root (forwarded to Section's outer div) so
+  // the editor canvas gets no extra Puck wrapper and matches the published DOM,
+  // like every other converted block (see CLAUDE.md).
+  inline: true,
   fields: {
     items: {
       type: 'array',
@@ -42,9 +46,9 @@ export const Stats: ComponentConfig<StatsProps> = {
       },
     ],
   },
-  render: ({ items }) => {
+  render: ({ items, puck }) => {
     return (
-      <Section maxWidth="916px">
+      <Section maxWidth="916px" ref={puck.dragRef}>
         <div
           style={{
             display: 'grid',

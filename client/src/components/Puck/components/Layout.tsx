@@ -106,9 +106,14 @@ export function withLayout<
     },
     defaultProps: {
       ...componentConfig.defaultProps,
+      // Deliberately DON'T seed `spanCol`/`spanRow` here. The render below emits
+      // `grid-column`/`grid-row` only when they are truthy, so seeding them to
+      // `1` made every top-level block emit an inert `grid-column: span 1;
+      // grid-row: span 1` (a no-op outside a grid container). Left unset, a
+      // fresh block emits no grid-area. Existing stored blocks that already
+      // carry `spanCol: 1`/`spanRow: 1` still render them (the render logic is
+      // unchanged), so previously saved documents stay byte-identical.
       layout: {
-        spanCol: 1,
-        spanRow: 1,
         padding: '0px',
         grow: false,
         ...componentConfig.defaultProps?.layout,

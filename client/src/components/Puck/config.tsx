@@ -32,9 +32,13 @@ import {
  * blocks and break the direct-child measure.
  */
 export const root: RootConfig = {
-  defaultProps: {
-    title: 'My Page',
-  },
+  // No root fields: Puck's default root exposes a `title` field, but here it is
+  // inert — it duplicates Wagtail's own page title and is never rendered (the
+  // page shell is the site template, not Puck). Declaring `fields: {}` removes
+  // that default field; dropping `defaultProps.title` stops seeding it. Existing
+  // documents that stored `root.props.title` (e.g. the marketing homepage's
+  // empty string) still load fine — the extra prop is simply ignored.
+  fields: {},
   render: ({ puck }) => {
     const DropZone = puck.renderDropZone as any;
     const renderClass = (puck as any)?.metadata?.renderClass as

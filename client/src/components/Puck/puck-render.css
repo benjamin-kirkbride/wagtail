@@ -100,6 +100,65 @@
   line-height: 1.25;
 }
 
+/* ---- heading type scale ----
+ * Two layers, by design:
+ *
+ * 1. Per-LEVEL base sizes, wrapped in `:where(...)` (ZERO specificity). These
+ *    beat the browser's UA heading sizes — so a Heading whose `level` is not 2
+ *    no longer falls back to a UA default on the site — while still yielding to
+ *    any real site rule (e.g. the marketing site's `.block-heading h2`, 0,1,1).
+ *    They also give the fork testapp (no site CSS) a sane per-level scale.
+ *
+ * 2. Explicit `size` OVERRIDES, at REAL specificity (`.block-heading
+ *    .block-heading--<size>` = 0,2,0 via two class selectors) so they beat BOTH
+ *    the site's `.block-heading h2` (0,1,1) and the `:where` base rules above.
+ *    The neutral size `l` emits no class, so it keeps the site/level scale.
+ */
+:where(.block-heading h1) {
+  font-size: 2rem;
+}
+:where(.block-heading h2) {
+  font-size: 1.3rem;
+}
+:where(.block-heading h3) {
+  font-size: 1.15rem;
+}
+:where(.block-heading h4) {
+  font-size: 1.05rem;
+}
+:where(.block-heading h5) {
+  font-size: 1rem;
+}
+:where(.block-heading h6) {
+  font-size: 0.9rem;
+}
+
+.block-heading .block-heading--xxxl {
+  font-size: 2.6rem;
+}
+.block-heading .block-heading--xxl {
+  font-size: 2.1rem;
+}
+.block-heading .block-heading--xl {
+  font-size: 1.65rem;
+}
+.block-heading .block-heading--m {
+  font-size: 1.1rem;
+}
+.block-heading .block-heading--s {
+  font-size: 1rem;
+}
+.block-heading .block-heading--xs {
+  font-size: 0.875rem;
+}
+
+/* Text (paragraph) size override. `m` is the neutral default (no class); `s`
+ * steps the body text down. Real specificity (0,2,0) beats `.block-paragraph p`
+ * (0,1,1). */
+.block-paragraph .block-paragraph--s {
+  font-size: 0.9rem;
+}
+
 :where(.block-paragraph) {
   margin-top: 1rem;
   line-height: 1.6;

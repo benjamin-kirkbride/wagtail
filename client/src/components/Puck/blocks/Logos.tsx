@@ -12,6 +12,10 @@ const GOOGLE_LOGO =
   'https://logolook.net/wp-content/uploads/2021/06/Google-Logo.png';
 
 export const Logos: ComponentConfig<LogosProps> = {
+  // `inline` + `puck.dragRef` on the root (forwarded to Section's outer div) so
+  // the editor canvas gets no extra Puck wrapper and matches the published DOM,
+  // like every other converted block (see CLAUDE.md).
+  inline: true,
   fields: {
     logos: {
       type: 'array',
@@ -35,9 +39,9 @@ export const Logos: ComponentConfig<LogosProps> = {
       { alt: 'google', imageUrl: GOOGLE_LOGO },
     ],
   },
-  render: ({ logos }) => {
+  render: ({ logos, puck }) => {
     return (
-      <Section>
+      <Section ref={puck.dragRef}>
         <div
           style={{
             display: 'flex',
