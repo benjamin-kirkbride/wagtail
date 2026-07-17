@@ -22,18 +22,17 @@ import type { CSSProperties } from 'react';
  * NO inline style, so the site CSS owns the look; only an explicit non-default
  * value emits a winning inline override.
  *
- * Data-compatibility sentinels (the trap): the marketing conversion stored
- * `padding: "64px"` and `align: "left"` (and `"center"`) on the homepage/other
- * heroes as CONVERSION ARTIFACTS, not editorial intent — those heroes render
- * centered with the site's spacing today and MUST keep doing so. So:
- *   - `padding === "64px"` (and empty) is treated as "use the site's spacing"
- *     and emits nothing; any other value is a real vertical-padding override.
- *   - `align === "center"` is the site default (emit nothing). `align === "left"`
- *     is the legacy conversion artifact and is ALSO mapped to the site default
- *     (centered): the stored data is never migrated (the live DB must stay
- *     untouched), and a legacy `"left"` cannot be distinguished from an
- *     intentional one, so `"left"` aliases the default. Only `"right"` produces
- *     a real inline override. This keeps every converted hero byte-identical.
+ * Data-compatibility sentinel (the trap): the marketing conversion stored
+ * `padding: "64px"` on heroes as a CONVERSION ARTIFACT, not editorial intent —
+ * those heroes render with the site's spacing today and must keep doing so, so
+ * `padding === "64px"` (and empty) is treated as "use the site's spacing" and
+ * emits nothing; any other value is a real vertical-padding override.
+ *
+ * `align`: `"center"` is the site default (emit nothing); `"left"` and
+ * `"right"` emit real inline overrides. (An earlier revision aliased legacy
+ * `"left"` to the default to protect conversion-artifact data, but the only
+ * live hero now stores an explicit `"center"`, so `"left"` is honored as
+ * editorial intent.)
  */
 export type HeroProps = {
   title: string;
@@ -70,7 +69,8 @@ export const Hero: ComponentConfig<HeroProps> = {
     description: { type: 'textarea' },
     buttons: {
       type: 'array',
-      min: 1,
+      // No `min`: a hero with zero buttons is valid (the live homepage hero
+      // has none) — and with min: 1, adding a first button made it undeletable.
       max: 4,
       getItemSummary: (item) => item.label || 'Button',
       arrayFields: {
@@ -133,9 +133,10 @@ export const Hero: ComponentConfig<HeroProps> = {
   render: ({ title, description, align, padding, buttons, image, puck }) => {
     const isBackground = image?.mode === 'background' && !!image?.url;
 
-    // "center" is the site default; "left" is the legacy conversion artifact,
-    // aliased to the default (see the block doc-comment); only "right" wins.
-    const alignOverride = align === 'right' ? 'right' : undefined;
+    // "center" is the site default (site CSS centers the hero — emit nothing);
+    // "left"/"right" are real overrides (see the block doc-comment).
+    const alignOverride =
+      align === 'right' || align === 'left' ? align : undefined;
     // "64px" (and empty) means "use the site's hero spacing" — emit nothing.
     const paddingOverride =
       padding && padding !== PADDING_SENTINEL ? padding : undefined;

@@ -137,16 +137,22 @@ describe('Hero rewired fields', () => {
     expect(hero.style.textAlign).toBe('');
   });
 
-  it('align legacy "left" is aliased to the default — emits no textAlign', () => {
+  it('align "left" emits a textAlign override', () => {
     const { container } = renderHero({ align: 'left' });
     const hero = container.querySelector('section.block-hero') as HTMLElement;
-    expect(hero.getAttribute('style')).toBeNull();
+    expect(hero.style.textAlign).toBe('left');
   });
 
   it('align "right" emits a textAlign override', () => {
     const { container } = renderHero({ align: 'right' });
     const hero = container.querySelector('section.block-hero') as HTMLElement;
     expect(hero.style.textAlign).toBe('right');
+  });
+
+  it('buttons array has no min — a lone button stays deletable', () => {
+    const heroFields = comp('Hero').fields as Record<string, any>;
+    expect(heroFields.buttons.min).toBeUndefined();
+    expect(heroFields.buttons.max).toBe(4);
   });
 
   it('image inline mode renders <img class="hero__image">, no background', () => {
