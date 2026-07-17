@@ -2,7 +2,6 @@ import { render } from '@testing-library/react';
 import { buildConfig, defaultData, normalizeData } from './config';
 
 const EXPECTED_BLOCKS = [
-  'Blank',
   'Button',
   'Card',
   'Flex',
@@ -20,7 +19,7 @@ const EXPECTED_BLOCKS = [
 describe('buildConfig', () => {
   const config = buildConfig();
 
-  it('registers all 13 expected blocks', () => {
+  it('registers all 12 expected blocks', () => {
     expect(Object.keys(config.components).sort()).toEqual(
       [...EXPECTED_BLOCKS].sort(),
     );

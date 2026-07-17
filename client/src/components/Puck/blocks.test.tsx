@@ -292,7 +292,7 @@ describe('config warts', () => {
     expect((config.root as any).defaultProps?.title).toBeUndefined();
   });
 
-  it.each(['Blank', 'Logos', 'Stats'])(
+  it.each(['Logos', 'Stats'])(
     '%s is inline (canvas/published DOM parity)',
     (name) => {
       expect(comp(name).inline).toBe(true);

@@ -1,6 +1,5 @@
 import type { Config, Data, RootConfig } from '@puckeditor/core';
 import {
-  Blank,
   Button,
   Card,
   Flex,
@@ -55,7 +54,7 @@ export const root: RootConfig = {
 
 export const categories = {
   layout: {
-    components: ['Grid', 'Flex', 'Space', 'Blank'],
+    components: ['Grid', 'Flex', 'Space'],
   },
   typography: {
     components: ['Heading', 'Text', 'RichText'],
@@ -79,7 +78,6 @@ export function buildConfig(): Config {
     root,
     categories: categories as any,
     components: {
-      Blank,
       Button,
       Card,
       Flex,

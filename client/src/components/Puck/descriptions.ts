@@ -5,7 +5,6 @@
  * descriptions.test.ts).
  */
 export const BLOCK_DESCRIPTIONS: Record<string, string> = {
-  Blank: 'An empty placeholder block. Useful as a temporary stand-in while composing a layout.',
   Button: 'A call-to-action link styled as a button. Link to a page on this site or an external URL.',
   Card: 'An icon with a title and a short description. Works well in a grid of features.',
   Flex: 'A flexible container that lays out the blocks inside it in a row or column.',
