@@ -92,10 +92,12 @@ export const Hero: ComponentConfig<HeroProps> = {
     },
     align: {
       type: 'radio',
+      // Natural reading order (matches Heading/Text); the DEFAULT is still
+      // "center" via defaultProps — the site's hero is centered by design.
       options: [
-        { label: 'center', value: 'center' },
-        { label: 'left', value: 'left' },
-        { label: 'right', value: 'right' },
+        { label: 'Left', value: 'left' },
+        { label: 'Center', value: 'center' },
+        { label: 'Right', value: 'right' },
       ],
     },
     image: {

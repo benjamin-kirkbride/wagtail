@@ -207,6 +207,14 @@ html[data-puck-takeover] .Puck {
   overflow: hidden;
 }
 
+/* The Page section holds real Wagtail form fields (title, slug, SEO title,
+   meta description) — 340px is fine for a nav or a block list but cramped for
+   editing text. Give that section a form-comfortable column; the canvas
+   flexes to absorb the difference. */
+.w-puck-takeover__panel[data-panel='page'] {
+  width: 520px;
+}
+
 .w-puck-takeover__panel-section {
   flex: 1 1 auto;
   min-height: 0;
