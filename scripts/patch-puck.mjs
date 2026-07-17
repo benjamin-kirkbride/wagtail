@@ -32,6 +32,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// The pure string transform + constants live in a CJS sibling so they can be
+// unit-tested in isolation (see scripts/patch-puck-lib.js and
+// client/src/components/Puck/patch-puck.test.ts). Behaviour here is unchanged.
+import lib from './patch-puck-lib.js';
+
+const { patchSource } = lib;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(
@@ -42,16 +48,6 @@ const distDir = path.resolve(
   'core',
   'dist',
 );
-
-const TARGET =
-  'prevResult.current = __spreadValues(__spreadValues({}, prevResult.current), mapped);';
-
-const REPLACEMENT =
-  'const __rallyMappedChangedOnly = {}; ' +
-  'for (const __rallyKey in changedProps) __rallyMappedChangedOnly[__rallyKey] = mapped[__rallyKey]; ' +
-  'prevResult.current = __spreadValues(__spreadValues({}, prevResult.current), __rallyMappedChangedOnly);';
-
-const MARKER = '__rallyMappedChangedOnly';
 
 function main() {
   if (!fs.existsSync(distDir)) {
@@ -69,15 +65,15 @@ function main() {
 
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf8');
+    const { code, status } = patchSource(src);
 
-    if (src.includes(MARKER)) {
+    if (status === 'already') {
       alreadyPatched += 1;
       continue;
     }
-    if (!src.includes(TARGET)) continue;
+    if (status === 'notfound') continue;
 
-    const next = src.split(TARGET).join(REPLACEMENT);
-    fs.writeFileSync(file, next);
+    fs.writeFileSync(file, code);
     patched += 1;
     // eslint-disable-next-line no-console
     console.log(`[patch-puck] patched ${path.basename(file)}`);
