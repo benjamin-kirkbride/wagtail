@@ -1,3 +1,8 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'wagtailpuck/css/puck.css' %}">
+{% comment %}
+Minimal rich-text content styles only. The full editor stylesheet (puck.css) is
+the admin UI and is not needed here: every block is inline-styled except
+RichText, whose .rich-text content these few rules cover.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'wagtailpuck/css/puck-render.css' %}">
 <div data-puck-render>{{ rendered_puck }}</div>

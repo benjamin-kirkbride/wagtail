@@ -1,0 +1,54 @@
+/*
+ * Minimal rich-text content styles for the PUBLISHED page and the editor canvas.
+ *
+ * The Puck editor stylesheet (`puck.css`, ~120 KB) styles the whole admin editor
+ * UI. Published pages don't need any of it: all 13 blocks render fully
+ * inline-styled — EXCEPT the RichText block, whose HTML Puck emits inside
+ * `<div class="rich-text">`. The only editor rules that touch that content are
+ * the handful below (margin collapse of the first/last block, whitespace
+ * handling, and defaults for blockquote/code). Shipping just these — linked on
+ * the public page in place of the full `puck.css`, and injected into the editor
+ * canvas iframe alongside the site's own stylesheet(s) — keeps the published
+ * page slim and keeps the canvas and the published page rendering rich text
+ * identically.
+ *
+ * Selectors target the stable `.rich-text` class (not Puck's hashed CSS-module
+ * class) so they survive a Puck version bump. Values are literal (no `--puck-*`
+ * custom properties) so the sheet is self-contained.
+ *
+ * Built by client/webpack.puck.config.js into
+ * wagtail/contrib/puck/static/wagtailpuck/css/puck-render.css.
+ */
+
+.rich-text > *:first-child {
+  margin-top: 0;
+}
+
+.rich-text > *:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text * {
+  white-space: pre-wrap;
+}
+
+.rich-text p:empty::before {
+  content: "\a0";
+}
+
+.rich-text blockquote {
+  margin: 1em 0;
+  padding: 0 1em;
+  border-left: 2px solid currentColor;
+}
+
+.rich-text code {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.16);
+}
+
+.rich-text pre code {
+  display: block;
+  padding: 0.5em 0.75em;
+}

@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 
 /**
  * `@puckeditor/core`'s real `<Puck>` pulls in `@dnd-kit` / `@preact/signals-core`
@@ -112,6 +112,49 @@ describe('PuckEditor takeover frame', () => {
     expect(Object.keys(props.config.components)).toHaveLength(13);
     expect(props.data).toBe(defaultData);
     expect(props.onChange).toBe(onChange);
+  });
+
+  it('disables Puck host-style cloning so admin CSS does not leak into the canvas', () => {
+    const host = setupWagtailDom();
+    render(<PuckEditor initialData={defaultData} onChange={jest.fn()} />, {
+      container: host,
+    });
+    const props = mockPuckSpy.mock.calls[0][0];
+    expect(props.iframe).toEqual({ syncHostStyles: false });
+  });
+
+  it('injects the previewCss stylesheets into the preview iframe', async () => {
+    const host = setupWagtailDom();
+    render(
+      <PuckEditor
+        initialData={defaultData}
+        onChange={jest.fn()}
+        previewCss={['/static/css/site.css', '/static/wagtailpuck/css/puck-render.css']}
+      />,
+      { container: host },
+    );
+
+    // The mock renders no real preview iframe; simulate the one Puck's AutoFrame
+    // would create in the canvas, and let the frame's tree observer adopt it.
+    const canvas = document.querySelector(
+      '.w-puck-takeover__canvas',
+    ) as HTMLElement;
+    const iframe = document.createElement('iframe');
+    canvas.appendChild(iframe);
+
+    await waitFor(() => {
+      const links = iframe.contentDocument?.head.querySelectorAll(
+        'link[data-puck-site-css]',
+      );
+      expect(links && links.length).toBe(2);
+    });
+    const hrefs = [
+      ...iframe.contentDocument!.head.querySelectorAll('link[data-puck-site-css]'),
+    ].map((l) => (l as HTMLLinkElement).getAttribute('href'));
+    expect(hrefs).toEqual([
+      '/static/css/site.css',
+      '/static/wagtailpuck/css/puck-render.css',
+    ]);
   });
 
   it('renders the four rail sections (Main, Page, Blocks, Outline)', () => {

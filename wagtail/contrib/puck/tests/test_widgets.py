@@ -1,8 +1,9 @@
 import json
+from unittest import mock
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from wagtail.admin.staticfiles import versioned_static
 from wagtail.contrib.puck.widgets import PuckWidget
@@ -37,11 +38,69 @@ class TestPuckWidget(SimpleTestCase):
         # is_hidden False so the field participates in the visible form layout
         self.assertFalse(PuckWidget().is_hidden)
 
-    def test_detail_value_is_valid_json(self):
-        widget = PuckWidget()
+    def _detail(self, widget=None):
+        widget = widget or PuckWidget()
         context = widget.get_context("puck_body", "", {"id": "id_puck_body"})
-        detail = context["widget"]["attrs"]["data-w-init-detail-value"]
-        self.assertEqual(json.loads(detail), {})
+        return json.loads(context["widget"]["attrs"]["data-w-init-detail-value"])
+
+    def test_detail_value_is_valid_json(self):
+        # Force the "no site CSS configured" case (ignore any ambient env var).
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_PREVIEW_CSS": ""}):
+            detail = self._detail()
+        self.assertIsInstance(detail, dict)
+        self.assertIn("previewCss", detail)
+
+    def test_preview_css_always_includes_render_stylesheet(self):
+        # The minimal rich-text content stylesheet is injected into the canvas
+        # regardless of the setting, so the canvas and published page match.
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_PREVIEW_CSS": ""}):
+            detail = self._detail()
+        self.assertEqual(
+            detail["previewCss"],
+            [versioned_static("wagtailpuck/css/puck-render.css")],
+        )
+
+    @override_settings(
+        WAGTAILPUCK_PREVIEW_CSS=["/static/css/site.css", "/static/css/print.css"]
+    )
+    def test_preview_css_carries_configured_site_stylesheets(self):
+        detail = self._detail()
+        self.assertEqual(
+            detail["previewCss"],
+            [
+                versioned_static("wagtailpuck/css/puck-render.css"),
+                "/static/css/site.css",
+                "/static/css/print.css",
+            ],
+        )
+
+    def test_preview_css_env_fallback(self):
+        # With no setting, a comma-separated env var is consulted, so a consuming
+        # site's editor can be pointed at its stylesheet without editing settings.
+        with mock.patch.dict(
+            "os.environ",
+            {"WAGTAILPUCK_PREVIEW_CSS": "/static/css/site.css, /static/css/x.css"},
+        ):
+            detail = self._detail()
+        self.assertEqual(
+            detail["previewCss"],
+            [
+                versioned_static("wagtailpuck/css/puck-render.css"),
+                "/static/css/site.css",
+                "/static/css/x.css",
+            ],
+        )
+
+    @override_settings(WAGTAILPUCK_PREVIEW_CSS=[])
+    def test_preview_css_explicit_empty_setting_ignores_env(self):
+        with mock.patch.dict(
+            "os.environ", {"WAGTAILPUCK_PREVIEW_CSS": "/static/css/site.css"}
+        ):
+            detail = self._detail()
+        self.assertEqual(
+            detail["previewCss"],
+            [versioned_static("wagtailpuck/css/puck-render.css")],
+        )
 
     def test_custom_attrs_are_merged(self):
         widget = PuckWidget(attrs={"class": "custom", "data-puck-input": "yes"})

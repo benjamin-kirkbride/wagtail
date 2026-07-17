@@ -167,9 +167,23 @@ const VIEWPORTS: { key: string; label: string; width: number | null }[] = [
   { key: 'full', label: 'Full width', width: null },
 ];
 
-export function TakeoverFrame() {
+export type TakeoverFrameProps = {
+  /**
+   * Stylesheets to inject into the preview iframe so the canvas renders under
+   * the site's CSS. Puck's AutoFrame host-style cloning is disabled (see
+   * PuckEditor), so without these the canvas content is unstyled (UA defaults).
+   */
+  previewCss?: string[];
+};
+
+export function TakeoverFrame({ previewCss }: TakeoverFrameProps = {}) {
   const [active, setActive] = useState<PanelKey>('page');
   const [viewport, setViewport] = useState<string>('full');
+
+  // Kept in a ref so the (mount-once) iframe-adopt effect always injects the
+  // current list without needing the effect to re-run.
+  const previewCssRef = useRef<string[]>(previewCss ?? []);
+  previewCssRef.current = previewCss ?? [];
 
   // Wagtail page edit/history live at /admin/pages/<id>/edit|add/... — derive the
   // history URL from the edit URL. Only pages (not create views) have history.
@@ -257,9 +271,37 @@ export function TakeoverFrame() {
       }
     };
 
+    // Inject the site's stylesheet(s) into the preview iframe. AutoFrame's
+    // host-style cloning is disabled (PuckEditor sets iframe.syncHostStyles
+    // false), so the admin CSS no longer leaks in; these <link>s put the site's
+    // CSS in its place, making the canvas match the published page. Puck's own
+    // interaction styles (drag/drop/selection) are injected by Puck itself and
+    // are untouched. Idempotent: each URL is added at most once per document.
+    const injectSiteStyles = (doc: Document) => {
+      const head = doc.head;
+      if (!head) return;
+      previewCssRef.current.forEach((href) => {
+        if (
+          head.querySelector(`link[data-puck-site-css][href="${href}"]`)
+        ) {
+          return;
+        }
+        const link = doc.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        link.setAttribute('data-puck-site-css', '');
+        head.appendChild(link);
+      });
+    };
+
     const adoptDocument = (iframe: HTMLIFrameElement) => {
-      const html = iframe.contentDocument?.documentElement;
-      if (!html || observedRoots.has(html)) return;
+      const doc = iframe.contentDocument;
+      const html = doc?.documentElement;
+      if (!doc || !html) return;
+      // Styles must be (re)injected even if we've already observed this root,
+      // because AutoFrame can wipe non-Puck head nodes when it re-syncs.
+      injectSiteStyles(doc);
+      if (observedRoots.has(html)) return;
       observedRoots.add(html);
       relabel(html);
       // AutoFrame re-syncs the cloned <html> attributes from the parent, which

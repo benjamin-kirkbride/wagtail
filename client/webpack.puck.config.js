@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import webpack from 'webpack';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
@@ -17,12 +18,45 @@ import TerserPlugin from 'terser-webpack-plugin';
  * excluded from the root tsconfig's `tsc --noEmit` check.
  *
  * Outputs:
- *   wagtail/contrib/puck/static/wagtailpuck/js/puck.js       (admin editor bundle, browser)
- *   wagtail/contrib/puck/static/wagtailpuck/css/puck.css     (Puck stylesheet, extracted)
- *   wagtail/contrib/puck/static/wagtailpuck/js/puck-ssr.js   (server-side renderer, node CLI)
+ *   wagtail/contrib/puck/static/wagtailpuck/js/puck.js          (admin editor bundle, browser)
+ *   wagtail/contrib/puck/static/wagtailpuck/css/puck.css        (Puck editor stylesheet, extracted)
+ *   wagtail/contrib/puck/static/wagtailpuck/css/puck-render.css (minimal published/canvas content styles)
+ *   wagtail/contrib/puck/static/wagtailpuck/js/puck-ssr.js      (server-side renderer, node CLI)
  */
 
 const OUT = path.join('wagtail', 'contrib', 'puck', 'static', 'wagtailpuck');
+
+/**
+ * Copy a static source file into the build output verbatim.
+ *
+ * `puck-render.css` is a plain, hand-written stylesheet (not an entry that needs
+ * bundling), so emitting it via MiniCssExtract would drag along a throwaway JS
+ * chunk. This just reads the source and writes it to the app's static dir, so
+ * the published page and the editor canvas can link it by URL.
+ */
+class EmitStaticFilePlugin {
+  constructor(source, destination) {
+    this.source = source;
+    this.destination = destination;
+  }
+
+  apply(compiler) {
+    const { RawSource } = compiler.webpack.sources;
+    const { Compilation } = compiler.webpack;
+    compiler.hooks.thisCompilation.tap('EmitStaticFilePlugin', (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'EmitStaticFilePlugin',
+          stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+        },
+        () => {
+          const contents = fs.readFileSync(this.source, 'utf8');
+          compilation.emitAsset(this.destination, new RawSource(contents));
+        },
+      );
+    });
+  }
+}
 
 const reactAlias = {
   react: path.resolve('node_modules/react18'),
@@ -115,6 +149,10 @@ export default function exports(env, argv) {
     },
     plugins: [
       new MiniCssExtractPlugin({ filename: path.join(OUT, 'css', '[name].css') }),
+      new EmitStaticFilePlugin(
+        path.resolve('client/src/components/Puck/puck-render.css'),
+        path.join(OUT, 'css', 'puck-render.css'),
+      ),
       singleFile,
     ],
   };

@@ -72,6 +72,15 @@ if (!WIN.__wagtailPuckInit) {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
+    // Server-side options ride along on the w-init event `detail` (see
+    // PuckWidget). `previewCss` lists the stylesheets to inject into the preview
+    // iframe so the canvas renders under the site's CSS, not the admin's.
+    const detail = (event as CustomEvent<{ previewCss?: string[] } | undefined>)
+      .detail;
+    const previewCss = Array.isArray(detail?.previewCss)
+      ? detail.previewCss
+      : [];
+
     // Page edit/create view -> full-viewport takeover.
     const form = input.closest<HTMLFormElement>('form#page-edit-form');
     if (form) {
@@ -101,7 +110,13 @@ if (!WIN.__wagtailPuckInit) {
       document.documentElement.setAttribute('data-puck-takeover', '');
 
       const root = createRoot(host);
-      root.render(<PuckEditor initialData={data} onChange={onChange} />);
+      root.render(
+        <PuckEditor
+          initialData={data}
+          onChange={onChange}
+          previewCss={previewCss}
+        />,
+      );
       return;
     }
 
@@ -113,6 +128,12 @@ if (!WIN.__wagtailPuckInit) {
       return;
     }
     const root = createRoot(mountNode);
-    root.render(<PuckEditor initialData={data} onChange={onChange} />);
+    root.render(
+      <PuckEditor
+        initialData={data}
+        onChange={onChange}
+        previewCss={previewCss}
+      />,
+    );
   });
 }

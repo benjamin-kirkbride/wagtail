@@ -45,6 +45,18 @@ On page create/edit views (`form#page-edit-form` present) the entrypoint mounts 
 - **Autosave races saves**: Wagtail's `w-autosave` posts the form on an interval; a save clicked around that tick can 400 on the revision conflict. Known rough edge (exists in stock Wagtail too); when driving the UI in tests, act well inside the interval.
 - Viewport controls are a canvas max-width toggle, not Puck's zoom/device frames (Puck's internal `<Canvas>` is not exposed compositionally — the one composition limitation found).
 
+## Canvas style parity
+
+The preview iframe must render content under the **site's** CSS, not the admin's, so the canvas matches the published page. Mechanism (all sanctioned Puck API, no fork):
+
+- **`<Puck iframe={{ syncHostStyles: false }}>`** (PuckEditor.tsx) turns off AutoFrame's host-style cloning — the 0.22 `IframeConfig.syncHostStyles` control. This stops the admin stylesheets (and, as a side effect, the parent `<html>` attribute sync, so `w-theme-dark` no longer clones in) from entering the iframe. **Do not** remove it. Puck's *own* iframe-internal interaction CSS (drag/drop/selection) is injected by `useInjectIframeCss` regardless of this flag (marked `data-puck-style-source="puck"`), so drag-and-drop visuals keep working — verify after any change here.
+- The site's stylesheets are injected in place: `PuckWidget.get_preview_css()` builds `options["previewCss"]` (always `puck-render.css`, plus `WAGTAILPUCK_PREVIEW_CSS` — a list setting, or a comma-separated env var fallback). It rides the `w-init` detail to the entrypoint, which threads it to `TakeoverFrame`, whose iframe-adopt effect appends `<link data-puck-site-css>` tags into the iframe head (idempotent). Extend that existing effect (the dark-mode relabel machinery) — do not add a parallel iframe observer.
+- The dark-mode relabel is now largely moot (no attribute sync to fight) but kept harmless; the canvas stays light-themed for screenshots because Playwright defaults to a light `prefers-color-scheme`.
+
+## puck.css vs puck-render.css
+
+`css/puck.css` is the ~120 KB **editor** stylesheet — loaded only by the admin editor (`PuckWidget.media`). The **published** page (`templates/wagtailpuck/puck/render.html`) links `css/puck-render.css` instead: all 13 blocks are inline-styled, so the only editor CSS published markup needs is the few `.rich-text` content rules (margin collapse, whitespace, blockquote/code) for the RichText block's `<div class="rich-text">` wrapper. `puck-render.css` is a hand-written source file at `client/src/components/Puck/puck-render.css`, copied verbatim into the app's static dir by `webpack.puck.config.js` (an `EmitStaticFilePlugin`, since the whole `static/` dir is a build artifact). If you touch RichText's output wrapper or bump Puck, re-check these rules still match.
+
 ## SSR
 
 `rendering.py` `render_puck(data)` runs `node puck-ssr.js` (stdin JSON → stdout HTML), cached, degrading to `""` if node/bundle absent. `client/src/entrypoints/ssr/puck-ssr.tsx` and the editor both import the same `buildConfig()` from `client/src/components/Puck/config.tsx` — that is the single source of truth for the 13 blocks. Change blocks there, once.
@@ -60,7 +72,7 @@ On page create/edit views (`form#page-edit-form` present) the entrypoint mounts 
 
 - Python: `python runtests.py wagtail.contrib.puck` (needs an env with the fork installed editable — `pip install -e ".[testing]"`).
 - JS unit: `npx jest --selectProjects puck`. Note the `puck` project **mocks** `@puckeditor/core` in `PuckEditor.test.tsx` because dnd-kit/signals ship untransformed ESM that jest's default `transformIgnorePatterns` skips; the real editor is verified via the webpack build + browser, not jest.
-- Build: `npm run build:puck` must emit `static/wagtailpuck/js/puck.js`, `js/puck-ssr.js`, `css/puck.css`.
+- Build: `npm run build:puck` must emit `static/wagtailpuck/js/puck.js`, `js/puck-ssr.js`, `css/puck.css`, and `css/puck-render.css`.
 - SSR smoke: `echo '{"content":[{"type":"Heading","props":{"id":"a","text":"Hi"}}],"root":{"props":{}}}' | node wagtail/contrib/puck/static/wagtailpuck/js/puck-ssr.js` should print HTML containing "Hi".
 - Browser (the important one): run the testapp (`DATABASE_NAME=/path/dev.sqlite3 python wagtail/test/manage.py migrate && createcachetable && runserver`), create a `PuckTestPage`, confirm the editor mounts and the **production** (minified) bundle has no console errors, then save → check a revision holds `puck_body`, publish → the live page is server-rendered HTML, and revert loads a prior revision. The mounted document MUST include a **RichText** block: Puck lazy-loads the tiptap editor for it via dynamic `import()`, so RichText exercises code paths (single-file bundling, formerly chunk loading) that empty/Heading/Text documents never touch — an editor that mounts an empty page proves very little. That exact gap shipped a ChunkLoadError once.
 

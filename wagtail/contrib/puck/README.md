@@ -13,6 +13,7 @@ On page create/edit views the editor **takes over the whole viewport**: a compos
 The Puck editor runs on its own **isolated React 18** (the Wagtail admin is on React 16). It is built by `client/webpack.puck.config.js` into two bundles, shipped under this app's `static/wagtailpuck/`:
 
 - `js/puck.js` + `css/puck.css` — the admin editor (browser).
+- `css/puck-render.css` — the minimal rich-text content styles linked on the published page (and injected into the editor canvas). See "Editor canvas parity" below.
 - `js/puck-ssr.js` — a Node CLI that renders a Puck document to HTML.
 
 ## Using it in a page model
@@ -44,6 +45,39 @@ This means:
 
 - **Static-baked sites** (e.g. wagtail-bakery → Cloudflare Pages): SSR happens at bake time; production stays fully static, no server.
 - **Dynamic sites**: the container serving Wagtail must have **Node available at runtime** for on-request rendering. A long-running Node sidecar (instead of subprocess-per-render) is a possible future optimization.
+
+## Editor canvas parity
+
+The editor renders page content in an isolated preview iframe. By default Puck's
+AutoFrame clones the surrounding document's stylesheets into that iframe — in the
+Wagtail admin that means the content shows *admin* fonts/colours/resets, not the
+site's. To make the canvas match the published page, the integration:
+
+1. Disables that cloning (`<Puck iframe={{ syncHostStyles: false }}>`), so admin
+   CSS no longer leaks in. Puck's own iframe-internal interaction styles (drag
+   previews, drop placeholders, selection outlines) are injected separately by
+   Puck and are unaffected.
+2. Injects the site's stylesheet(s) into the iframe instead, listed by the
+   `WAGTAILPUCK_PREVIEW_CSS` setting.
+
+```python
+# settings.py — URLs or already-resolved static paths of the site's own CSS.
+WAGTAILPUCK_PREVIEW_CSS = ["/static/css/site.css"]
+```
+
+`puck-render.css` (the minimal rich-text content stylesheet, see below) is always
+injected too, so with the setting absent the canvas still renders content under
+neutral UA defaults rather than admin styles. If the setting is unset, a
+comma-separated `WAGTAILPUCK_PREVIEW_CSS` environment variable is used as a
+fallback — convenient for pointing a consuming site's editor at its stylesheet
+without editing that site's settings.
+
+The published page's render partial (`wagtailpuck/puck/render.html`) links
+`puck-render.css` rather than the full 120 KB editor stylesheet: every block is
+inline-styled, so the only editor CSS the published markup needs is the handful
+of rules covering the RichText block's `.rich-text` content wrapper. Linking the
+same slim sheet on both sides keeps the page light and the canvas and published
+page rendering rich text identically.
 
 ## The blocks
 

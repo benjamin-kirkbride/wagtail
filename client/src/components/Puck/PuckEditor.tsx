@@ -6,6 +6,11 @@ import { TakeoverFrame } from './TakeoverFrame';
 export type PuckEditorProps = {
   initialData: Data;
   onChange: (data: Data) => void;
+  /**
+   * Stylesheets to inject into the preview iframe so the canvas renders under
+   * the site's CSS. Supplied by the widget (see PuckWidget.get_preview_css).
+   */
+  previewCss?: string[];
 };
 
 /**
@@ -18,11 +23,27 @@ export type PuckEditorProps = {
  * flow: the parent widget mirrors `onChange` into the hidden form input, and
  * Wagtail's own save/publish machinery (reparented into the frame's header)
  * submits the form.
+ *
+ * `iframe.syncHostStyles: false` stops Puck's AutoFrame from cloning the admin
+ * document's stylesheets into the preview iframe (which made canvas content look
+ * admin-styled instead of site-styled). Puck's own iframe-internal interaction
+ * styles — drag previews, drop placeholders, selection outlines — are injected
+ * separately (useInjectIframeCss) and are unaffected. The site's CSS is injected
+ * in its place by `TakeoverFrame` from `previewCss`.
  */
-export function PuckEditor({ initialData, onChange }: PuckEditorProps) {
+export function PuckEditor({
+  initialData,
+  onChange,
+  previewCss,
+}: PuckEditorProps) {
   return (
-    <Puck config={buildConfig()} data={initialData} onChange={onChange}>
-      <TakeoverFrame />
+    <Puck
+      config={buildConfig()}
+      data={initialData}
+      onChange={onChange}
+      iframe={{ syncHostStyles: false }}
+    >
+      <TakeoverFrame previewCss={previewCss} />
     </Puck>
   );
 }
