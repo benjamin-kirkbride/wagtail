@@ -19,7 +19,6 @@ const StubSlot = ({ as: _as, disallow: _disallow, style }: any) => (
 const slotOverrides: Record<string, Record<string, unknown>> = {
   Flex: { items: StubSlot },
   Grid: { items: StubSlot },
-  Template: { children: StubSlot },
 };
 
 function propsFor(name: string) {

@@ -12,14 +12,13 @@ const EXPECTED_BLOCKS = [
   'RichText',
   'Space',
   'Stats',
-  'Template',
   'Text',
 ];
 
 describe('buildConfig', () => {
   const config = buildConfig();
 
-  it('registers all 12 expected blocks', () => {
+  it('registers all 11 expected blocks', () => {
     expect(Object.keys(config.components).sort()).toEqual(
       [...EXPECTED_BLOCKS].sort(),
     );

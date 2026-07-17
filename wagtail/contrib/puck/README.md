@@ -104,7 +104,7 @@ and published page rendering identically.
 
 ## The blocks
 
-All 12 blocks are ported in `client/src/components/Puck/blocks/`: Button, Card, Flex, Grid, Heading, Hero, Logos, RichText, Space, Stats, Template, Text. `client/src/components/Puck/config.tsx` (`buildConfig()`) is the single source of truth for the editor and the SSR renderer. Hero and Template are simplified for v1 (no external data fetching), and RichText is Puck-native rich text — it is not Wagtail's Draftail.
+All 11 blocks are ported in `client/src/components/Puck/blocks/`: Button, Card, Flex, Grid, Heading, Hero, Logos, RichText, Space, Stats, Text. `client/src/components/Puck/config.tsx` (`buildConfig()`) is the single source of truth for the editor and the SSR renderer. Hero is simplified for v1 (no external data fetching), and RichText is Puck-native rich text — it is not Wagtail's Draftail.
 
 ## Building
 

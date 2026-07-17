@@ -65,7 +65,7 @@ The five blocks the marketing conversion uses — **Hero, Heading, RichText, Tex
 
 **Every one of these blocks is `inline` and attaches `puck.dragRef` to its `block-*` root.** That is load-bearing for canvas parity: an `inline` block whose root is the drag element gets NO Puck wrapper `<div>` in the editor, so its `block-*` root stays a *direct child* of the drop zone — the same as on the published page (`<Render>` never wraps). A non-inline block gets a `[data-puck-component][data-puck-dnd]` wrapper injected between it and the drop zone, which breaks `.stream > .block-*` direct-child rules in the canvas only. If you add or convert a content block, make it `inline` + `dragRef` on the classed root, or the canvas and the page will diverge. (The `withLayout` HOC already does this; it now also forwards a `block-*` class to its `Layout` root — see its second arg.)
 
-The other seven demo blocks (Card, Flex, Grid, Logos, Space, Stats, Template) keep their generic inline styles for now.
+The other six demo blocks (Card, Flex, Grid, Logos, Space, Stats) keep their generic inline styles for now.
 
 ## The content-column class (`WAGTAILPUCK_RENDER_CLASS`)
 
@@ -82,7 +82,7 @@ The drop zone is the element that directly contains the top-level blocks, so it 
 
 ## SSR
 
-`rendering.py` `render_puck(data)` runs `node puck-ssr.js` (stdin JSON → stdout HTML), cached, degrading to `""` if node/bundle absent. `client/src/entrypoints/ssr/puck-ssr.tsx` and the editor both import the same `buildConfig()` from `client/src/components/Puck/config.tsx` — that is the single source of truth for the 12 blocks. Change blocks there, once.
+`rendering.py` `render_puck(data)` runs `node puck-ssr.js` (stdin JSON → stdout HTML), cached, degrading to `""` if node/bundle absent. `client/src/entrypoints/ssr/puck-ssr.tsx` and the editor both import the same `buildConfig()` from `client/src/components/Puck/config.tsx` — that is the single source of truth for the 11 blocks. Change blocks there, once.
 
 ## Where things live
 
@@ -103,4 +103,4 @@ The drop zone is the element that directly contains the top-level blocks, so it 
 
 ## Scope (v1)
 
-Out: comments-on-blocks, Wagtail image-chooser in blocks (image fields are URL strings), persistent Node SSR sidecar. Hero/Template are simplified; Puck's RichText is Puck-native (not Draftail).
+Out: comments-on-blocks, Wagtail image-chooser in blocks (image fields are URL strings), persistent Node SSR sidecar. Hero is simplified; Puck's RichText is Puck-native (not Draftail).

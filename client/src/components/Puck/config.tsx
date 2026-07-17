@@ -10,7 +10,6 @@ import {
   RichText,
   Space,
   Stats,
-  Template,
   Text,
 } from './blocks';
 
@@ -65,7 +64,7 @@ export const categories = {
   },
   other: {
     title: 'Other',
-    components: ['Card', 'Hero', 'Logos', 'Stats', 'Template'],
+    components: ['Card', 'Hero', 'Logos', 'Stats'],
   },
 } as const;
 
@@ -88,7 +87,6 @@ export function buildConfig(): Config {
       RichText,
       Space,
       Stats,
-      Template,
       Text,
     },
   } as Config;

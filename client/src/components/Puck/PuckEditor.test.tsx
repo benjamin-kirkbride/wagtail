@@ -109,7 +109,7 @@ describe('PuckEditor takeover frame', () => {
 
     expect(mockPuckSpy).toHaveBeenCalledTimes(1);
     const props = mockPuckSpy.mock.calls[0][0];
-    expect(Object.keys(props.config.components)).toHaveLength(12);
+    expect(Object.keys(props.config.components)).toHaveLength(11);
     expect(props.data).toBe(defaultData);
     expect(props.onChange).toBe(onChange);
   });

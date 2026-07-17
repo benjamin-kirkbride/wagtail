@@ -11,7 +11,7 @@
  * may set contentEditable. All text is edited through the fields sidebar.
  *
  * We walk every component's fields recursively and assert that invariant, plus a
- * cheap belt that the 12 blocks and the root config are all present.
+ * cheap belt that the 11 blocks and the root config are all present.
  */
 import { buildConfig } from './config';
 
@@ -44,7 +44,7 @@ function walkFields(
 describe('Puck config invariants', () => {
   const config = buildConfig();
 
-  it('registers all 12 blocks and the root config', () => {
+  it('registers all 11 blocks and the root config', () => {
     const EXPECTED = [
       'Button',
       'Card',
@@ -56,11 +56,10 @@ describe('Puck config invariants', () => {
       'RichText',
       'Space',
       'Stats',
-      'Template',
       'Text',
     ];
     expect(Object.keys(config.components).sort()).toEqual([...EXPECTED].sort());
-    expect(Object.keys(config.components)).toHaveLength(12);
+    expect(Object.keys(config.components)).toHaveLength(11);
     expect(config.root).toBeDefined();
   });
 

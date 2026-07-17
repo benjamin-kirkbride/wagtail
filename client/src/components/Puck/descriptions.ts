@@ -15,7 +15,6 @@ export const BLOCK_DESCRIPTIONS: Record<string, string> = {
   RichText: 'Formatted text with bold, italics, links and lists. Edit it directly in the canvas.',
   Space: 'Invisible spacing between blocks. Use it to add breathing room to a layout.',
   Stats: 'A row of statistics — each a value with a label underneath.',
-  Template: 'A reusable container for composing a group of blocks together.',
   Text: 'A plain paragraph of body text.',
 };
 
