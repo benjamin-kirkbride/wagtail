@@ -6,6 +6,8 @@ import {
 } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { Puck, usePuck } from '@puckeditor/core';
+import { buildConfig } from './config';
+import { BLOCK_DESCRIPTIONS, PAGE_DESCRIPTION } from './descriptions';
 
 /**
  * The Puck "takeover" frame.
@@ -125,6 +127,39 @@ function useReparent(
     // Selector is a stable literal per call site; run once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+}
+
+// Component type -> editor label, resolved once (labels are static config).
+const CONFIG_LABELS: Record<string, string> = (() => {
+  const cfg = buildConfig();
+  return Object.fromEntries(
+    Object.entries(cfg.components).map(([type, def]) => [
+      type,
+      (def as { label?: string }).label ?? type,
+    ]),
+  );
+})();
+
+/**
+ * Header for the right-hand fields sidebar: the selected block's name and a
+ * one-line description of what it is/does (from descriptions.ts), above its
+ * properties. Falls back to "Page" when nothing is selected.
+ */
+function FieldsHeader() {
+  const { selectedItem } = usePuck() as {
+    selectedItem?: { type?: string } | null;
+  };
+  const type = selectedItem?.type;
+  const name = type ? (CONFIG_LABELS[type] ?? type) : 'Page';
+  const description = type ? BLOCK_DESCRIPTIONS[type] : PAGE_DESCRIPTION;
+  return (
+    <div className="w-puck-takeover__fields-header">
+      <div className="w-puck-takeover__fields-title">{name}</div>
+      {description ? (
+        <p className="w-puck-takeover__fields-desc">{description}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function UndoRedo() {
@@ -458,7 +493,7 @@ export function TakeoverFrame({ previewCss }: TakeoverFrameProps = {}) {
         </div>
 
         <div className="w-puck-takeover__fields">
-          <div className="w-puck-takeover__fields-title">Properties</div>
+          <FieldsHeader />
           <Puck.Fields />
         </div>
       </div>

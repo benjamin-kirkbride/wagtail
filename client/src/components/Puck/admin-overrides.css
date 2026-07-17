@@ -270,12 +270,23 @@ html[data-puck-takeover] .Puck {
   overflow-y: auto;
 }
 
-.w-puck-takeover__fields-title {
+/* Selected-block header: name + one-line description above the properties. */
+.w-puck-takeover__fields-header {
   flex: 0 0 auto;
   padding: 12px 16px;
-  font-weight: 600;
-  font-size: 0.8125rem;
   border-bottom: 1px solid var(--w-color-border-furniture, #e0e0e0);
+}
+
+.w-puck-takeover__fields-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.w-puck-takeover__fields-desc {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--w-color-text-label, #52525b);
 }
 
 /* --- Reparented Wagtail DOM: presentation fixes --------------------- */

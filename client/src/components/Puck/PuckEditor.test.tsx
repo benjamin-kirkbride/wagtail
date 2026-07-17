@@ -261,4 +261,19 @@ describe('PuckEditor takeover frame', () => {
     );
     expect(toggles).toHaveLength(3);
   });
+
+  it('renders the fields header — block name + description, falling back to Page', () => {
+    const host = setupWagtailDom();
+    render(<PuckEditor initialData={defaultData} onChange={jest.fn()} />, {
+      container: host,
+    });
+    // The mocked usePuck exposes no selectedItem, so the header shows the
+    // page-root fallback.
+    expect(
+      document.querySelector('.w-puck-takeover__fields-title')?.textContent,
+    ).toBe('Page');
+    expect(
+      document.querySelector('.w-puck-takeover__fields-desc')?.textContent,
+    ).toContain('Select a block');
+  });
 });
