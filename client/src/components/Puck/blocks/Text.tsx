@@ -1,6 +1,5 @@
 import { ALargeSmall, AlignLeft } from 'lucide-react';
 import type { ComponentConfig } from '@puckeditor/core';
-import { Section } from '../components/Section';
 import { WithLayout, withLayout } from '../components/Layout';
 
 export type TextProps = WithLayout<{
@@ -51,34 +50,29 @@ const TextInner: ComponentConfig<TextProps> = {
     size: 'm',
     color: 'default',
   },
-  render: ({ align, color, text, size, maxWidth }) => {
+  render: ({ align, color, text, maxWidth }) => {
     return (
-      <Section maxWidth={maxWidth}>
-        <span
-          style={{
-            color:
-              color === 'default' ? 'inherit' : 'var(--puck-color-grey-05)',
-            display: 'flex',
-            textAlign: align,
-            width: '100%',
-            fontSize: size === 'm' ? '20px' : '16px',
-            fontWeight: 300,
-            maxWidth,
-            justifyContent:
-              align === 'center'
-                ? 'center'
-                : align === 'right'
-                  ? 'flex-end'
-                  : 'flex-start',
-          }}
-        >
-          {text}
-        </span>
-      </Section>
+      <p
+        style={{
+          margin: 0,
+          textAlign: align && align !== 'left' ? align : undefined,
+          maxWidth: maxWidth || undefined,
+          color: color === 'muted' ? 'var(--muted, #5b6068)' : undefined,
+        }}
+      >
+        {text}
+      </p>
     );
   },
 };
 
-export const Text = withLayout(TextInner);
+/**
+ * Plain body text. Rendered as a semantic `<p>` inside a `.block-paragraph`
+ * root so it inherits the site's body typography (the demo's inline font
+ * size / flex span wrapper are dropped). `align`, `maxWidth` and a muted
+ * `color` remain field-driven overrides that yield to the site's defaults.
+ * Neutral fallback in `puck-render.css`.
+ */
+export const Text = withLayout(TextInner, 'block-paragraph');
 
 export default Text;

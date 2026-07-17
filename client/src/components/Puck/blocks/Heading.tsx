@@ -1,5 +1,4 @@
 import type { ComponentConfig } from '@puckeditor/core';
-import { Section } from '../components/Section';
 import { WithLayout, withLayout } from '../components/Layout';
 
 type HeadingSize = 'xxxxl' | 'xxxl' | 'xxl' | 'xl' | 'l' | 'm' | 's' | 'xs';
@@ -30,17 +29,6 @@ const levelOptions = [
   { label: '5', value: '5' },
   { label: '6', value: '6' },
 ];
-
-const fontSizes: Record<HeadingSize, string> = {
-  xxxxl: '72px',
-  xxxl: '56px',
-  xxl: '48px',
-  xl: '40px',
-  l: '32px',
-  m: '24px',
-  s: '20px',
-  xs: '16px',
-};
 
 const HeadingInternal: ComponentConfig<HeadingProps> = {
   fields: {
@@ -74,27 +62,28 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
       padding: '8px',
     },
   },
-  render: ({ align, text, size, level }) => {
-    const Tag = (level ? `h${level}` : 'span') as any;
+  render: ({ align, text, level }) => {
+    // Default to h2 (the site's content heading) rather than a bare span so the
+    // markup is semantic and the site's `.block-heading h2` typography applies.
+    const Tag = (level ? `h${level}` : 'h2') as any;
     return (
-      <Section>
-        <Tag
-          style={{
-            margin: 0,
-            fontSize: fontSizes[size] || fontSizes.m,
-            fontWeight: 700,
-            lineHeight: 1.1,
-          }}
-        >
-          <span style={{ display: 'block', textAlign: align, width: '100%' }}>
-            {text}
-          </span>
-        </Tag>
-      </Section>
+      <Tag
+        style={align && align !== 'left' ? { textAlign: align } : undefined}
+      >
+        {text}
+      </Tag>
     );
   },
 };
 
-export const Heading = withLayout(HeadingInternal);
+/**
+ * Renders a clean semantic heading inside a `.block-heading` root (the demo's
+ * inline font sizes and Section max-width are dropped) so the site's
+ * `.block-heading h2` typography styles it. `size` no longer drives an inline
+ * font-size — the site owns heading scale; `align` is kept as a field-driven
+ * override that yields to the site's default. Neutral fallback in
+ * `puck-render.css`.
+ */
+export const Heading = withLayout(HeadingInternal, 'block-heading');
 
 export default Heading;

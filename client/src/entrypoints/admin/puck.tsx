@@ -74,12 +74,19 @@ if (!WIN.__wagtailPuckInit) {
 
     // Server-side options ride along on the w-init event `detail` (see
     // PuckWidget). `previewCss` lists the stylesheets to inject into the preview
-    // iframe so the canvas renders under the site's CSS, not the admin's.
-    const detail = (event as CustomEvent<{ previewCss?: string[] } | undefined>)
-      .detail;
+    // iframe so the canvas renders under the site's CSS, not the admin's;
+    // `renderClass` is the site's content-column class applied to the canvas
+    // drop zone so the content measure matches the published page.
+    const detail = (
+      event as CustomEvent<
+        { previewCss?: string[]; renderClass?: string } | undefined
+      >
+    ).detail;
     const previewCss = Array.isArray(detail?.previewCss)
       ? detail.previewCss
       : [];
+    const renderClass =
+      typeof detail?.renderClass === 'string' ? detail.renderClass : '';
 
     // Page edit/create view -> full-viewport takeover.
     const form = input.closest<HTMLFormElement>('form#page-edit-form');
@@ -115,6 +122,7 @@ if (!WIN.__wagtailPuckInit) {
           initialData={data}
           onChange={onChange}
           previewCss={previewCss}
+          renderClass={renderClass}
         />,
       );
       return;

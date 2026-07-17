@@ -11,6 +11,12 @@ export type PuckEditorProps = {
    * the site's CSS. Supplied by the widget (see PuckWidget.get_preview_css).
    */
   previewCss?: string[];
+  /**
+   * The site's content-column class, applied to the canvas drop zone (via Puck
+   * metadata → the root render) so the content measure matches the published
+   * page. Supplied by the widget (see PuckWidget / get_render_class).
+   */
+  renderClass?: string;
 };
 
 /**
@@ -35,12 +41,14 @@ export function PuckEditor({
   initialData,
   onChange,
   previewCss,
+  renderClass,
 }: PuckEditorProps) {
   return (
     <Puck
       config={buildConfig()}
       data={initialData}
       onChange={onChange}
+      metadata={{ renderClass: renderClass || '' }}
       iframe={{ syncHostStyles: false }}
     >
       <TakeoverFrame previewCss={previewCss} />

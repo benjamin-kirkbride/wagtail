@@ -7,6 +7,7 @@ from django.forms import Media, widgets
 from django.utils.functional import cached_property
 
 from wagtail.admin.staticfiles import versioned_static
+from wagtail.contrib.puck.rendering import get_render_class
 
 
 def get_preview_css():
@@ -57,8 +58,14 @@ class PuckWidget(widgets.HiddenInput):
     def __init__(self, *args, **kwargs):
         # Server-side editor options, dispatched to the client via the w-init
         # controller's detail. ``previewCss`` lists the stylesheets the client
-        # injects into the preview iframe so the canvas matches the site.
-        self.options = {"previewCss": get_preview_css()}
+        # injects into the preview iframe so the canvas matches the site;
+        # ``renderClass`` is the site's content-column class, applied to the
+        # canvas drop zone (via Puck metadata) so the content measure matches
+        # the published page. See ``get_render_class``.
+        self.options = {
+            "previewCss": get_preview_css(),
+            "renderClass": get_render_class(),
+        }
 
         default_attrs = {
             "data-puck-input": True,

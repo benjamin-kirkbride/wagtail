@@ -3,11 +3,71 @@ import shutil
 import unittest
 from unittest import mock
 
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import TestCase, override_settings
 from django.utils.safestring import SafeString
 
 from wagtail.contrib.puck import rendering
-from wagtail.contrib.puck.rendering import BUNDLE_PATH, render_puck
+from wagtail.contrib.puck.rendering import BUNDLE_PATH, get_render_class, render_puck
+
+
+class TestGetRenderClass(TestCase):
+    @override_settings(WAGTAILPUCK_RENDER_CLASS="stream")
+    def test_from_setting(self):
+        self.assertEqual(get_render_class(), "stream")
+
+    def test_env_fallback_and_strip(self):
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_RENDER_CLASS": " stream "}):
+            self.assertEqual(get_render_class(), "stream")
+
+    def test_default_empty(self):
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_RENDER_CLASS": ""}):
+            self.assertEqual(get_render_class(), "")
+
+
+class TestRenderPuckRenderClass(TestCase):
+    def setUp(self):
+        cache.clear()
+        rendering._warned_unavailable = False
+
+    @override_settings(WAGTAILPUCK_RENDER_CLASS="stream")
+    @mock.patch(
+        "wagtail.contrib.puck.rendering.shutil.which", return_value="/usr/bin/node"
+    )
+    @mock.patch("wagtail.contrib.puck.rendering.os.path.exists", return_value=True)
+    @mock.patch("wagtail.contrib.puck.rendering.subprocess.run")
+    def test_render_class_passed_to_subprocess_env(
+        self, mock_run, mock_exists, mock_which
+    ):
+        mock_run.return_value = mock.Mock(
+            returncode=0, stdout="<div>ok</div>", stderr=""
+        )
+        render_puck({"content": [], "root": {"props": {}}})
+        _, kwargs = mock_run.call_args
+        self.assertEqual(kwargs["env"]["WAGTAILPUCK_RENDER_CLASS"], "stream")
+
+    @mock.patch(
+        "wagtail.contrib.puck.rendering.shutil.which", return_value="/usr/bin/node"
+    )
+    @mock.patch("wagtail.contrib.puck.rendering.os.path.exists", return_value=True)
+    @mock.patch("wagtail.contrib.puck.rendering.subprocess.run")
+    def test_render_class_is_part_of_cache_key(
+        self, mock_run, mock_exists, mock_which
+    ):
+        doc = {"content": [], "root": {"props": {}}}
+        with override_settings(WAGTAILPUCK_RENDER_CLASS="stream"):
+            mock_run.return_value = mock.Mock(
+                returncode=0, stdout="<div>stream</div>", stderr=""
+            )
+            self.assertEqual(render_puck(doc), "<div>stream</div>")
+        # Same document, different class -> must re-render, not serve the cached
+        # "stream" HTML.
+        with override_settings(WAGTAILPUCK_RENDER_CLASS="other"):
+            mock_run.return_value = mock.Mock(
+                returncode=0, stdout="<div>other</div>", stderr=""
+            )
+            self.assertEqual(render_puck(doc), "<div>other</div>")
+        self.assertEqual(mock_run.call_count, 2)
 
 
 class TestRenderPuckGracefulDegradation(TestCase):

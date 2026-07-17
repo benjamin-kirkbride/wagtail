@@ -102,6 +102,24 @@ class TestPuckWidget(SimpleTestCase):
             [versioned_static("wagtailpuck/css/puck-render.css")],
         )
 
+    def test_detail_includes_render_class(self):
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_RENDER_CLASS": ""}):
+            detail = self._detail()
+        self.assertIn("renderClass", detail)
+        self.assertEqual(detail["renderClass"], "")
+
+    @override_settings(WAGTAILPUCK_RENDER_CLASS="stream")
+    def test_render_class_from_setting(self):
+        detail = self._detail()
+        self.assertEqual(detail["renderClass"], "stream")
+
+    def test_render_class_env_fallback(self):
+        # With no setting, the env var is consulted, so a consuming site's editor
+        # canvas can be given its content-column class without editing settings.
+        with mock.patch.dict("os.environ", {"WAGTAILPUCK_RENDER_CLASS": "stream"}):
+            detail = self._detail()
+        self.assertEqual(detail["renderClass"], "stream")
+
     def test_custom_attrs_are_merged(self):
         widget = PuckWidget(attrs={"class": "custom", "data-puck-input": "yes"})
         # explicitly passed attrs override defaults

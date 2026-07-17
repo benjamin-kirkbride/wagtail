@@ -19,6 +19,17 @@ import {
  * Page-level root config. Renders the main content drop zone. Header / footer
  * chrome from the demo is intentionally omitted — in Wagtail the surrounding
  * page shell is provided by the site template, not by Puck.
+ *
+ * The drop zone is the element that directly contains the top-level blocks, so
+ * it is the natural home for the site's content-column class (e.g. `stream`):
+ * with the blocks rendered `inline` (each attaching `puck.dragRef` to its own
+ * `block-*` root, so Puck adds no extra wrapper) they are direct children of
+ * this element on both the published page and the editor canvas, and the site's
+ * `.<class> > *` measure rules apply identically in both. The class name is not
+ * hardcoded — it rides in on `puck.metadata.renderClass`, fed from the
+ * `WAGTAILPUCK_RENDER_CLASS` setting (SSR) / editor option (canvas). No wrapping
+ * `<div>` is added here: an extra level would sit between the class and the
+ * blocks and break the direct-child measure.
  */
 export const root: RootConfig = {
   defaultProps: {
@@ -26,16 +37,14 @@ export const root: RootConfig = {
   },
   render: ({ puck }) => {
     const DropZone = puck.renderDropZone as any;
+    const renderClass = (puck as any)?.metadata?.renderClass as
+      | string
+      | undefined;
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100%',
-        }}
-      >
-        <DropZone zone="default-zone" style={{ flexGrow: 1 }} />
-      </div>
+      <DropZone
+        zone="default-zone"
+        className={renderClass || undefined}
+      />
     );
   },
 };

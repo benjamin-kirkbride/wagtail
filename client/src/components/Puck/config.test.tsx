@@ -1,3 +1,4 @@
+import { render } from '@testing-library/react';
 import { buildConfig, defaultData, normalizeData } from './config';
 
 const EXPECTED_BLOCKS = [
@@ -28,6 +29,37 @@ describe('buildConfig', () => {
   it('provides a root config with a render function', () => {
     expect(config.root).toBeDefined();
     expect(typeof config.root?.render).toBe('function');
+  });
+
+  it('root render applies metadata.renderClass to the drop zone', () => {
+    const captured: Record<string, any> = {};
+    const puck: any = {
+      renderDropZone: (props: any) => {
+        Object.assign(captured, props);
+        return null;
+      },
+      metadata: { renderClass: 'stream' },
+      isEditing: false,
+      dragRef: null,
+    };
+    render((config.root as any).render({ puck }));
+    expect(captured.zone).toBe('default-zone');
+    expect(captured.className).toBe('stream');
+  });
+
+  it('root render leaves the drop zone class undefined when no renderClass', () => {
+    const captured: Record<string, any> = {};
+    const puck: any = {
+      renderDropZone: (props: any) => {
+        Object.assign(captured, props);
+        return null;
+      },
+      metadata: {},
+      isEditing: false,
+      dragRef: null,
+    };
+    render((config.root as any).render({ puck }));
+    expect(captured.className).toBeUndefined();
   });
 
   it('gives every component fields and a render function', () => {

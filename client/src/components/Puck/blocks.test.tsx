@@ -44,17 +44,41 @@ describe('block render() smoke tests', () => {
 });
 
 describe('block spot checks', () => {
-  it('Button renders an anchor with the label', () => {
+  it('Button renders the site CTA markup (.block-cta > .button anchor)', () => {
     const component = (config.components as Record<string, any>).Button;
-    const { getByText } = render(component.render(propsFor('Button')));
+    const { container, getByText } = render(
+      component.render(propsFor('Button')),
+    );
     const el = getByText('Button');
-    expect(el.closest('a')).not.toBeNull();
+    const anchor = el.closest('a');
+    expect(anchor).not.toBeNull();
+    expect(anchor).toHaveClass('button');
+    expect(container.querySelector('.block-cta a.button')).not.toBeNull();
   });
 
-  it('Heading renders its text', () => {
+  it('Heading renders its text in a .block-heading root as an h2 by default', () => {
     const component = (config.components as Record<string, any>).Heading;
-    const { getByText } = render(component.render(propsFor('Heading')));
+    const { container, getByText } = render(
+      component.render(propsFor('Heading')),
+    );
     expect(getByText('Heading')).toBeInTheDocument();
+    expect(container.querySelector('.block-heading h2')?.textContent).toBe(
+      'Heading',
+    );
+  });
+
+  it('Hero renders the site hero markup (.block-hero.hero > .hero__heading)', () => {
+    const component = (config.components as Record<string, any>).Hero;
+    const { container } = render(component.render(propsFor('Hero')));
+    const hero = container.querySelector('section.block-hero.hero');
+    expect(hero).not.toBeNull();
+    expect(hero?.querySelector('.hero__heading')?.textContent).toBe('Hero');
+  });
+
+  it('RichText renders inside a .block-paragraph root', () => {
+    const component = (config.components as Record<string, any>).RichText;
+    const { container } = render(component.render(propsFor('RichText')));
+    expect(container.querySelector('.block-paragraph')).not.toBeNull();
   });
 
   it('Stats renders its items', () => {

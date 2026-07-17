@@ -94,7 +94,10 @@ export { Layout };
 
 export function withLayout<
   ThisComponentConfig extends ComponentConfig<any> = ComponentConfig
->(componentConfig: ThisComponentConfig): ThisComponentConfig {
+>(
+  componentConfig: ThisComponentConfig,
+  className?: string,
+): ThisComponentConfig {
   return {
     ...componentConfig,
     fields: {
@@ -152,6 +155,7 @@ export function withLayout<
     render: (props: any) => (
       <Layout
         layout={props.layout as LayoutFieldProps}
+        className={className}
         ref={props.puck.dragRef}
       >
         {componentConfig.render(props)}

@@ -65,6 +65,28 @@ site's. To make the canvas match the published page, the integration:
 WAGTAILPUCK_PREVIEW_CSS = ["/static/css/site.css"]
 ```
 
+### Content-column class (`WAGTAILPUCK_RENDER_CLASS`)
+
+The content blocks (Hero, Heading, RichText, Text, Button) render the site's own
+semantic markup — `.block-hero`/`.hero__heading`, `.block-heading`,
+`.block-paragraph`, `.block-cta`/`.button` — rather than presentational inline
+styles, so the site's stylesheet styles them. To give the block container the
+site's content-column class (so rules like `.stream > *` measure the blocks),
+set:
+
+```python
+WAGTAILPUCK_RENDER_CLASS = "stream"
+```
+
+The class is applied to the drop zone (the element that directly contains the
+top-level blocks) on **both** the published page and the editor canvas, so the
+content measure matches. Every content block is rendered `inline` with its class
+on its own root, so the block is a direct child of that container in both — the
+site's direct-child rules apply identically. If the setting is unset, a
+same-named environment variable is used as a fallback (like
+`WAGTAILPUCK_PREVIEW_CSS`); with neither set, blocks fall back to the neutral
+defaults in `puck-render.css`.
+
 `puck-render.css` (the minimal rich-text content stylesheet, see below) is always
 injected too, so with the setting absent the canvas still renders content under
 neutral UA defaults rather than admin styles. If the setting is unset, a
@@ -73,11 +95,12 @@ fallback — convenient for pointing a consuming site's editor at its stylesheet
 without editing that site's settings.
 
 The published page's render partial (`wagtailpuck/puck/render.html`) links
-`puck-render.css` rather than the full 120 KB editor stylesheet: every block is
-inline-styled, so the only editor CSS the published markup needs is the handful
-of rules covering the RichText block's `.rich-text` content wrapper. Linking the
-same slim sheet on both sides keeps the page light and the canvas and published
-page rendering rich text identically.
+`puck-render.css` rather than the full 120 KB editor stylesheet. That slim sheet
+carries the `.rich-text` content rules, the `display:contents` passthrough on the
+render wrapper, and neutral `:where(...)` fallback defaults for the content
+blocks' `block-*` / design classes (zero specificity, so any site CSS wins).
+Linking the same sheet on both sides keeps the page light and keeps the canvas
+and published page rendering identically.
 
 ## The blocks
 

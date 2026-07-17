@@ -42,8 +42,17 @@ async function main() {
 
   try {
     const data = normalizeData(parsed);
+    // The content-column wrapper class rides in on the environment (set by
+    // rendering.py) and is threaded into Puck's `metadata` so the root render
+    // can apply it to the drop zone. Kept out of the document/stdin so the SSR
+    // contract stays "just the Puck JSON document".
+    const renderClass = process.env.WAGTAILPUCK_RENDER_CLASS || '';
     const html = renderToStaticMarkup(
-      <Render config={buildConfig()} data={data} />,
+      <Render
+        config={buildConfig()}
+        data={data}
+        metadata={{ renderClass }}
+      />,
     );
     process.stdout.write(html);
     process.exit(0);

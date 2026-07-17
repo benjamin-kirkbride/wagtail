@@ -53,9 +53,32 @@ The preview iframe must render content under the **site's** CSS, not the admin's
 - The site's stylesheets are injected in place: `PuckWidget.get_preview_css()` builds `options["previewCss"]` (always `puck-render.css`, plus `WAGTAILPUCK_PREVIEW_CSS` — a list setting, or a comma-separated env var fallback). It rides the `w-init` detail to the entrypoint, which threads it to `TakeoverFrame`, whose iframe-adopt effect appends `<link data-puck-site-css>` tags into the iframe head (idempotent). Extend that existing effect (the dark-mode relabel machinery) — do not add a parallel iframe observer.
 - The dark-mode relabel is now largely moot (no attribute sync to fight) but kept harmless; the canvas stays light-themed for screenshots because Playwright defaults to a light `prefers-color-scheme`.
 
+## Site-compatible block markup (the content blocks)
+
+The five blocks the marketing conversion uses — **Hero, Heading, RichText, Text, Button** — do NOT emit presentational inline styles. They emit the site's own semantic markup so a consuming site's stylesheet styles them directly (matching the old StreamField block templates verbatim):
+
+- Hero → `<section class="block-hero hero">` with `.hero__heading` / `.hero__intro` / `.hero__image` / `.hero__actions > a.button`.
+- Heading → `.block-heading` root, `<h2>` (or `h{level}`) inside.
+- RichText → `.block-paragraph` root wrapping Puck's `.rich-text` HTML (so `.block-paragraph p` / `strong` apply).
+- Text → `.block-paragraph` root, semantic `<p>`.
+- Button → `.block-cta` root, `<p><a class="button">` (matching the old `cta` block).
+
+**Every one of these blocks is `inline` and attaches `puck.dragRef` to its `block-*` root.** That is load-bearing for canvas parity: an `inline` block whose root is the drag element gets NO Puck wrapper `<div>` in the editor, so its `block-*` root stays a *direct child* of the drop zone — the same as on the published page (`<Render>` never wraps). A non-inline block gets a `[data-puck-component][data-puck-dnd]` wrapper injected between it and the drop zone, which breaks `.stream > .block-*` direct-child rules in the canvas only. If you add or convert a content block, make it `inline` + `dragRef` on the classed root, or the canvas and the page will diverge. (The `withLayout` HOC already does this; it now also forwards a `block-*` class to its `Layout` root — see its second arg.)
+
+The other eight demo blocks (Blank, Card, Flex, Grid, Logos, Space, Stats, Template) keep their generic inline styles for now.
+
+## The content-column class (`WAGTAILPUCK_RENDER_CLASS`)
+
+The drop zone is the element that directly contains the top-level blocks, so it is where a site's content-column class goes (the marketing site's `stream`, whose `.stream > *` gives the readable measure and `.stream > .block-hero` the wider centred hero). The class is NOT hardcoded:
+
+- `get_render_class()` (`rendering.py`) reads the **`WAGTAILPUCK_RENDER_CLASS`** setting, falling back to a same-named env var (mirrors `WAGTAILPUCK_PREVIEW_CSS`). Default empty.
+- It reaches the block container via Puck **`metadata.renderClass`**, applied by the root render to `renderDropZone`'s `className`. Both paths thread it as metadata (kept out of the saved document): **SSR** — `rendering.py` passes it to `node` via the environment, `puck-ssr.tsx` reads `process.env.WAGTAILPUCK_RENDER_CLASS` into `<Render metadata>`; **editor** — `widgets.py` puts it on the `w-init` detail, the entrypoint threads it to `<PuckEditor renderClass>` → `<Puck metadata>`. The render class is part of the SSR **cache key** (same doc, different class → different HTML).
+- The root render adds **no wrapper `<div>`** (an extra level would sit between the class and the blocks and break the direct-child measure).
+- `render.html`'s inert `<div data-puck-render>` is `display:contents` (in `puck-render.css`) so a site template that *also* wraps the include in its column class doesn't double up and cap the drop zone.
+
 ## puck.css vs puck-render.css
 
-`css/puck.css` is the ~120 KB **editor** stylesheet — loaded only by the admin editor (`PuckWidget.media`). The **published** page (`templates/wagtailpuck/puck/render.html`) links `css/puck-render.css` instead: all 13 blocks are inline-styled, so the only editor CSS published markup needs is the few `.rich-text` content rules (margin collapse, whitespace, blockquote/code) for the RichText block's `<div class="rich-text">` wrapper. `puck-render.css` is a hand-written source file at `client/src/components/Puck/puck-render.css`, copied verbatim into the app's static dir by `webpack.puck.config.js` (an `EmitStaticFilePlugin`, since the whole `static/` dir is a build artifact). If you touch RichText's output wrapper or bump Puck, re-check these rules still match.
+`css/puck.css` is the ~120 KB **editor** stylesheet — loaded only by the admin editor (`PuckWidget.media`). The **published** page (`templates/wagtailpuck/puck/render.html`) links `css/puck-render.css` instead. That sheet carries three things: the `.rich-text` content rules (margin collapse, whitespace, blockquote/code) for the RichText block; the `display:contents` passthrough on `[data-puck-render]`; and **neutral fallback defaults for the content blocks' `block-*` / design classes, every rule wrapped in `:where(...)` (zero specificity) so any site CSS wins** — this is what lets a classless environment (the fork testapp) still render the declassed blocks acceptably while the sheet can be linked on the public page and injected into the canvas alongside the site's own CSS without fighting it. `puck-render.css` is a hand-written source file at `client/src/components/Puck/puck-render.css`, copied verbatim into the app's static dir by `webpack.puck.config.js` (an `EmitStaticFilePlugin`, since the whole `static/` dir is a build artifact). If you touch RichText's output wrapper, the block markup, or bump Puck, re-check these rules still match.
 
 ## SSR
 
@@ -69,6 +92,8 @@ The preview iframe must render content under the **site's** CSS, not the admin's
 - Test fixture: `PuckTestPage` in `wagtail/test/testapp/models.py` (Django app label `tests`, Python module `wagtail.test.testapp.models`), migration `0062_pucktestpage.py`, template `templates/tests/puck_test_page.html`; `"wagtail.contrib.puck"` registered in `wagtail/test/settings.py`.
 
 ## Verifying changes
+
+**Every fix gets a regression test, in the same round as the fix**, at the layer the bug actually lived: unit test where the logic is unit-testable, a config/tripwire assertion for build- or CSS-level invariants jsdom cannot exercise, and a Playwright integration test for anything that only fails at runtime (mount errors, drag-and-drop, geometry). This integration's bug history is exactly the "works in the demo flow, breaks on real content" class that unit tests miss. See `TESTING.md` in this directory for the full test inventory, which guard covers which fixed bug, and how to run the integration harness (`client/tests/integration/puck.test.js`).
 
 - Python: `python runtests.py wagtail.contrib.puck` (needs an env with the fork installed editable — `pip install -e ".[testing]"`).
 - JS unit: `npx jest --selectProjects puck`. Note the `puck` project **mocks** `@puckeditor/core` in `PuckEditor.test.tsx` because dnd-kit/signals ship untransformed ESM that jest's default `transformIgnorePatterns` skips; the real editor is verified via the webpack build + browser, not jest.

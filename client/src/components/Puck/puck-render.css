@@ -1,24 +1,129 @@
 /*
- * Minimal rich-text content styles for the PUBLISHED page and the editor canvas.
+ * Content styles for the PUBLISHED page and the editor canvas.
  *
  * The Puck editor stylesheet (`puck.css`, ~120 KB) styles the whole admin editor
- * UI. Published pages don't need any of it: all 13 blocks render fully
- * inline-styled — EXCEPT the RichText block, whose HTML Puck emits inside
- * `<div class="rich-text">`. The only editor rules that touch that content are
- * the handful below (margin collapse of the first/last block, whitespace
- * handling, and defaults for blockquote/code). Shipping just these — linked on
- * the public page in place of the full `puck.css`, and injected into the editor
- * canvas iframe alongside the site's own stylesheet(s) — keeps the published
- * page slim and keeps the canvas and the published page rendering rich text
- * identically.
+ * UI. Published pages don't need any of it. Two things live here instead:
  *
- * Selectors target the stable `.rich-text` class (not Puck's hashed CSS-module
- * class) so they survive a Puck version bump. Values are literal (no `--puck-*`
- * custom properties) so the sheet is self-contained.
+ * 1. Rich-text content rules for the RichText block, whose HTML Puck emits
+ *    inside `<div class="rich-text">` (margin collapse of the first/last block,
+ *    whitespace handling, defaults for blockquote/code).
+ *
+ * 2. Neutral FALLBACK defaults for the content blocks (Hero, Heading, RichText,
+ *    Text, Button), which now emit semantic markup with `block-*` / design
+ *    classes (`.block-hero`, `.hero__heading`, `.button`, …) instead of
+ *    presentational inline styles, so a consuming site's stylesheet styles them.
+ *    Where no site CSS is present (the fork testapp), these rules give the blocks
+ *    a readable default look. Every one is wrapped in `:where(...)` so it has
+ *    ZERO specificity and yields to ANY site rule (e.g. the marketing site's
+ *    `.stream > .block-hero` / `.hero__heading`), which is why this sheet can be
+ *    linked on the public page and injected into the canvas alongside the site's
+ *    own CSS without fighting it.
+ *
+ * Shipping just this — linked on the public page in place of the full `puck.css`,
+ * and injected into the editor canvas iframe alongside the site's own
+ * stylesheet(s) — keeps the published page slim and keeps the canvas and the
+ * published page rendering identically.
+ *
+ * Selectors target stable class names (not Puck's hashed CSS-module classes) so
+ * they survive a Puck version bump. Values are literal (no `--puck-*` custom
+ * properties) so the sheet is self-contained.
  *
  * Built by client/webpack.puck.config.js into
  * wagtail/contrib/puck/static/wagtailpuck/css/puck-render.css.
  */
+
+/* ---- render wrapper passthrough ----
+ * `render.html` wraps the SSR output in an inert `<div data-puck-render>`. Make
+ * it layout-transparent so it imposes no box of its own: the content column is
+ * governed solely by the drop zone's render class (WAGTAILPUCK_RENDER_CLASS,
+ * e.g. `stream`) and/or the site template's own wrapper. Without this, a site
+ * that also wraps the include in its content-column class (e.g.
+ * `<div class="stream">…</div>`) would apply that column's `> *` measure to this
+ * wrapper and cap everything inside it (a wide hero could not exceed the body
+ * measure). `display:contents` removes the box while leaving the drop zone —
+ * which carries the real column class — to lay the blocks out.
+ */
+:where([data-puck-render]) {
+  display: contents;
+}
+
+/* ---- neutral fallback block defaults (zero specificity via :where) ---- */
+
+:where(.block-hero) {
+  max-width: 46rem;
+  margin-inline: auto;
+  padding: 4rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+:where(.hero__heading) {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+:where(.hero__intro) {
+  max-width: 34rem;
+  margin: 1.25rem auto 0;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+:where(.hero__image) {
+  max-width: 100%;
+  height: auto;
+  margin-top: 2rem;
+}
+
+:where(.hero__actions) {
+  margin-top: 1.5rem;
+}
+
+:where(.block-heading, .block-paragraph, .block-cta) {
+  max-width: 38rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+:where(
+    .block-heading h1,
+    .block-heading h2,
+    .block-heading h3,
+    .block-heading h4,
+    .block-heading h5,
+    .block-heading h6
+  ) {
+  margin: 2rem 0 0.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+:where(.block-paragraph) {
+  margin-top: 1rem;
+  line-height: 1.6;
+}
+
+:where(.block-cta) {
+  margin-top: 1.5rem;
+}
+
+:where(.button) {
+  display: inline-block;
+  padding: 0.7rem 1.5rem;
+  border-radius: 4px;
+  background: #1f2933;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+:where(.button--secondary) {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
 
 .rich-text > *:first-child {
   margin-top: 0;
