@@ -285,6 +285,42 @@ describe('layout wart: no inert grid-area at default', () => {
   });
 });
 
+describe('link fields (external URL + internal-page picker)', () => {
+  it('Button href is a custom link field', () => {
+    const href = (comp('Button').fields as Record<string, any>).href;
+    expect(href.type).toBe('custom');
+    expect(typeof href.render).toBe('function');
+  });
+
+  it('Hero button href (nested arrayField) is a custom link field', () => {
+    const buttons = (comp('Hero').fields as Record<string, any>).buttons;
+    const href = buttons.arrayFields.href;
+    expect(href.type).toBe('custom');
+    expect(typeof href.render).toBe('function');
+  });
+
+  it('RichText field carries a renderMenu (the link control)', () => {
+    const richtext = (comp('RichText').fields as Record<string, any>).richtext;
+    expect(richtext.type).toBe('richtext');
+    expect(typeof richtext.renderMenu).toBe('function');
+  });
+
+  it('Button still renders its href through to the anchor (contract intact)', () => {
+    const { container } = render(
+      comp('Button').render({
+        ...comp('Button').defaultProps,
+        href: 'page:5',
+        puck: { ...stubPuck, isEditing: false },
+      }),
+    );
+    // Not editing -> the stored href passes straight to the anchor; the page:5
+    // token is resolved server-side at render, not in the block.
+    expect(container.querySelector('a.button')?.getAttribute('href')).toBe(
+      'page:5',
+    );
+  });
+});
+
 describe('config warts', () => {
   it('root config exposes no title field (inert duplicate removed)', () => {
     expect(config.root?.fields).toEqual({});

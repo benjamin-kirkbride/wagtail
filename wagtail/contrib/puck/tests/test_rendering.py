@@ -70,6 +70,104 @@ class TestRenderPuckRenderClass(TestCase):
         self.assertEqual(mock_run.call_count, 2)
 
 
+class TestResolvePageLinks(TestCase):
+    """The `page:<id>` -> URL resolution walk (block-shape-agnostic)."""
+
+    def test_resolves_tokens_across_button_hero_and_richtext(self):
+        doc = {
+            "content": [
+                {"type": "Button", "props": {"href": "page:5", "label": "x"}},
+                {
+                    "type": "Hero",
+                    "props": {
+                        "buttons": [
+                            {"href": "page:7"},
+                            {"href": "https://ext.example/"},
+                        ]
+                    },
+                },
+                {
+                    "type": "RichText",
+                    "props": {
+                        "richtext": '<p><a href="page:9">a</a> and '
+                        '<a href="/rel/">b</a></p>'
+                    },
+                },
+            ],
+            "root": {"props": {}},
+        }
+        with mock.patch.object(
+            rendering,
+            "_resolve_page_url",
+            side_effect=lambda pid, cm: f"/url/{pid}/",
+        ):
+            out = rendering._resolve_page_links(doc)
+
+        self.assertEqual(out["content"][0]["props"]["href"], "/url/5/")
+        self.assertEqual(out["content"][1]["props"]["buttons"][0]["href"], "/url/7/")
+        # External URLs pass through untouched.
+        self.assertEqual(
+            out["content"][1]["props"]["buttons"][1]["href"], "https://ext.example/"
+        )
+        # Rich-text href token rewritten; a relative href left as-is.
+        self.assertIn('href="/url/9/"', out["content"][2]["props"]["richtext"])
+        self.assertIn('href="/rel/"', out["content"][2]["props"]["richtext"])
+        # Original document is not mutated (a copy is returned).
+        self.assertEqual(doc["content"][0]["props"]["href"], "page:5")
+
+    def test_leaves_prose_mentioning_page_colon_alone(self):
+        # A bare "page:5" in body text is neither a whole-string token nor an
+        # href attribute, so it must not be resolved.
+        with mock.patch.object(
+            rendering,
+            "_resolve_page_url",
+            side_effect=AssertionError("must not resolve prose"),
+        ):
+            out = rendering._resolve_page_links(
+                {"content": [{"props": {"body": "see page:5 for details"}}]}
+            )
+        self.assertEqual(out["content"][0]["props"]["body"], "see page:5 for details")
+
+    def test_missing_page_resolves_to_hash(self):
+        self.assertEqual(rendering._resolve_page_url(999999, {}), "#")
+
+    def test_existing_page_resolves_to_its_url(self):
+        from wagtail.models import Page
+
+        page = Page.objects.filter(depth__gte=2).first()
+        self.assertIsNotNone(page, "test tree has at least one non-root page")
+        self.assertEqual(
+            rendering._resolve_page_url(page.id, {}), page.get_url() or "#"
+        )
+
+
+class TestRenderPuckResolvesLinks(TestCase):
+    def setUp(self):
+        cache.clear()
+        rendering._warned_unavailable = False
+
+    @mock.patch(
+        "wagtail.contrib.puck.rendering.shutil.which", return_value="/usr/bin/node"
+    )
+    @mock.patch("wagtail.contrib.puck.rendering.os.path.exists", return_value=True)
+    @mock.patch("wagtail.contrib.puck.rendering.subprocess.run")
+    def test_tokens_resolved_before_ssr(self, mock_run, mock_exists, mock_which):
+        mock_run.return_value = mock.Mock(returncode=0, stdout="<div/>", stderr="")
+        doc = {
+            "content": [{"type": "Button", "props": {"href": "page:5"}}],
+            "root": {"props": {}},
+        }
+        with mock.patch.object(
+            rendering, "_resolve_page_url", side_effect=lambda pid, cm: f"/url/{pid}/"
+        ):
+            render_puck(doc)
+        _, kwargs = mock_run.call_args
+        payload = kwargs["input"]
+        # The SSR bundle receives the RESOLVED url, never the token.
+        self.assertIn("/url/5/", payload)
+        self.assertNotIn("page:5", payload)
+
+
 class TestRenderPuckGracefulDegradation(TestCase):
     def setUp(self):
         # Reset the once-only warning guard between tests.

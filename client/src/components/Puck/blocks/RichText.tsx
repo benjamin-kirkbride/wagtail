@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core';
 import { WithLayout, withLayout } from '../components/Layout';
+import { renderRichTextMenu } from '../links/richTextLink';
 
 export type RichTextProps = WithLayout<{
   richtext?: string;
@@ -9,6 +10,17 @@ const RichTextInner: ComponentConfig<RichTextProps> = {
   fields: {
     richtext: {
       type: 'richtext',
+      // Append a Link/Unlink control (external URL + internal-page picker) to
+      // Puck's default rich-text toolbar. See links/richTextLink.tsx.
+      renderMenu: renderRichTextMenu,
+      // Puck registers TipTap's Link extension, whose URI validation rejects
+      // unknown schemes. Register the `page` pseudo-scheme so an internal-page
+      // token (`page:<id>`, see linkValue.ts) is a valid href; it is resolved
+      // to a real URL at render time in Python. (Puck passes this straight to
+      // Link.configure, so the extension's autolink/paste defaults are kept.)
+      options: {
+        link: { protocols: ['page'] },
+      },
     },
   },
   render: ({ richtext }) => {

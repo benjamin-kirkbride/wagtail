@@ -108,6 +108,13 @@ class TestPuckWidget(SimpleTestCase):
         self.assertIn("renderClass", detail)
         self.assertEqual(detail["renderClass"], "")
 
+    def test_detail_includes_pages_api_url(self):
+        # The internal-page link picker fetches from the admin pages API; its
+        # reversed URL rides along in the widget options.
+        detail = self._detail()
+        self.assertIn("pagesApiUrl", detail)
+        self.assertTrue(detail["pagesApiUrl"].endswith("/pages/"))
+
     @override_settings(WAGTAILPUCK_RENDER_CLASS="stream")
     def test_render_class_from_setting(self):
         detail = self._detail()

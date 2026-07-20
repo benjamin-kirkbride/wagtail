@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import type { Data } from '@puckeditor/core';
 import { PuckEditor } from '../../components/Puck/PuckEditor';
 import { normalizeData } from '../../components/Puck/config';
+import { setLinkRuntime } from '../../components/Puck/links/runtime';
 
 /**
  * Admin entrypoint for the Puck visual editor.
@@ -79,7 +80,11 @@ if (!WIN.__wagtailPuckInit) {
     // drop zone so the content measure matches the published page.
     const detail = (
       event as CustomEvent<
-        { previewCss?: string[]; renderClass?: string } | undefined
+        {
+          previewCss?: string[];
+          renderClass?: string;
+          pagesApiUrl?: string;
+        } | undefined
       >
     ).detail;
     const previewCss = Array.isArray(detail?.previewCss)
@@ -87,6 +92,12 @@ if (!WIN.__wagtailPuckInit) {
       : [];
     const renderClass =
       typeof detail?.renderClass === 'string' ? detail.renderClass : '';
+
+    // The internal-page picker fetches from the admin pages API; its URL is
+    // reversed server-side and delivered here. Stash it for the link UI.
+    if (typeof detail?.pagesApiUrl === 'string' && detail.pagesApiUrl) {
+      setLinkRuntime({ pagesApiUrl: detail.pagesApiUrl });
+    }
 
     // Page edit/create view -> full-viewport takeover.
     const form = input.closest<HTMLFormElement>('form#page-edit-form');

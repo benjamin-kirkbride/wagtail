@@ -1,4 +1,5 @@
 import type { ComponentConfig } from '@puckeditor/core';
+import { linkField } from '../links/LinkField';
 
 export type ButtonProps = {
   label: string;
@@ -23,7 +24,7 @@ export const Button: ComponentConfig<ButtonProps> = {
       type: 'text',
       placeholder: 'Lorem ipsum...',
     },
-    href: { type: 'text' },
+    href: linkField('Link'),
     variant: {
       type: 'radio',
       options: [

@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 
@@ -12,6 +13,77 @@ from django.utils.safestring import SafeString, mark_safe
 from wagtail.contrib.puck.fields import default_puck_document
 
 logger = logging.getLogger(__name__)
+
+# The internal-page link token stored by the editor: `page:<id>`. Resolved here,
+# at render time, to the page's live URL — so an internal link survives the
+# target page moving / changing slug, and the static bake emits correct paths.
+# See client/src/components/Puck/links/linkValue.ts for the client contract.
+_PAGE_TOKEN_RE = re.compile(r"^page:(\d+)$")
+# The same token inside an HTML href attribute (rich-text link marks store
+# `<a href="page:3">`), captured so only real link targets are rewritten — never
+# an incidental "page:3" in body prose.
+_PAGE_HREF_RE = re.compile(r"""(href=["'])page:(\d+)(["'])""")
+
+
+def _resolve_page_url(page_id, cache_map):
+    """Resolve a page id to its served URL, memoized within one render.
+
+    Missing / unroutable pages resolve to '#' (a dead but harmless link) with a
+    one-line warning, rather than raising and blanking the whole page.
+    """
+    if page_id in cache_map:
+        return cache_map[page_id]
+
+    # Imported lazily so this module stays importable without the app registry
+    # ready (e.g. when only get_render_class is used).
+    from wagtail.models import Page
+
+    url = "#"
+    page = Page.objects.filter(id=page_id).first()
+    if page is None:
+        logger.warning("Puck link: page id %s not found; linking to '#'.", page_id)
+    else:
+        resolved = page.get_url()
+        if resolved:
+            url = resolved
+        else:
+            logger.warning(
+                "Puck link: page id %s has no URL (unpublished/no site?); "
+                "linking to '#'.",
+                page_id,
+            )
+    cache_map[page_id] = url
+    return url
+
+
+def _resolve_page_links(data, cache_map=None):
+    """Return a copy of the Puck document with `page:<id>` tokens resolved.
+
+    Walks the document generically (no per-block knowledge): every string value
+    that is a bare `page:<id>` token (a Button/Hero href) is replaced with the
+    resolved URL, and every `href="page:<id>"` inside a string (a rich-text link
+    mark) is rewritten in place. All other values pass through untouched.
+    """
+    if cache_map is None:
+        cache_map = {}
+
+    if isinstance(data, dict):
+        return {k: _resolve_page_links(v, cache_map) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_resolve_page_links(v, cache_map) for v in data]
+    if isinstance(data, str):
+        token = _PAGE_TOKEN_RE.match(data.strip())
+        if token:
+            return _resolve_page_url(int(token.group(1)), cache_map)
+        if "page:" in data:
+            return _PAGE_HREF_RE.sub(
+                lambda m: m.group(1)
+                + _resolve_page_url(int(m.group(2)), cache_map)
+                + m.group(3),
+                data,
+            )
+        return data
+    return data
 
 BUNDLE_PATH = os.path.join(
     os.path.dirname(__file__), "static", "wagtailpuck", "js", "puck-ssr.js"
@@ -73,6 +145,11 @@ def render_puck(data) -> SafeString:
                 data = default_puck_document()
     if not data:
         data = default_puck_document()
+
+    # Resolve internal-page link tokens (`page:<id>`) to live URLs before both
+    # hashing and SSR, so the cache key reflects the resolved output — a target
+    # page's slug change yields a different payload and invalidates the entry.
+    data = _resolve_page_links(data)
 
     render_class = get_render_class()
     payload = json.dumps(data)

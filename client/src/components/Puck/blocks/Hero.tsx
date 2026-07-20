@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core';
 import type { CSSProperties } from 'react';
+import { linkField } from '../links/LinkField';
 
 /**
  * Simplified port of the demo Hero. The demo's `external` quote picker,
@@ -75,7 +76,7 @@ export const Hero: ComponentConfig<HeroProps> = {
       getItemSummary: (item) => item.label || 'Button',
       arrayFields: {
         label: { type: 'text' },
-        href: { type: 'text' },
+        href: linkField('Link'),
         variant: {
           type: 'select',
           options: [

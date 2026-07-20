@@ -4,10 +4,25 @@ import os
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms import Media, widgets
+from django.urls import NoReverseMatch, reverse
 from django.utils.functional import cached_property
 
 from wagtail.admin.staticfiles import versioned_static
 from wagtail.contrib.puck.rendering import get_render_class
+
+
+def get_pages_api_url():
+    """URL of the admin pages API listing, for the internal-page link picker.
+
+    The Puck link UI fetches pages from Wagtail's admin API (same-origin, session
+    -authorized) to power its internal-page picker. The admin can be mounted under
+    any path, so the URL is reversed rather than hardcoded. Returns None if the
+    admin API is not routed (the client then falls back to its default endpoint).
+    """
+    try:
+        return reverse("wagtailadmin_api:pages:listing")
+    except NoReverseMatch:
+        return None
 
 
 def get_preview_css():
@@ -65,6 +80,7 @@ class PuckWidget(widgets.HiddenInput):
         self.options = {
             "previewCss": get_preview_css(),
             "renderClass": get_render_class(),
+            "pagesApiUrl": get_pages_api_url(),
         }
 
         default_attrs = {

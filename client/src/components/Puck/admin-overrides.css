@@ -308,6 +308,249 @@ html[data-puck-takeover] .Puck {
   color: var(--w-color-text-label, #52525b);
 }
 
+/* ------------------------------------------------------------------ *
+ * Link UI (custom href field + RichText link control)
+ *
+ * Shared styles for the external-URL / internal-page link editor used by the
+ * Button and Hero href fields (a Puck `custom` field) and by the RichText
+ * toolbar's Link control. Everything expands INLINE (no portal / popper), so it
+ * is immune to the takeover stacking-context occlusion; uses Wagtail's
+ * `--w-color-*` tokens so it adapts to light/dark like the rest of the frame.
+ * ------------------------------------------------------------------ */
+.w-puck-link {
+  font-size: 0.8125rem;
+}
+
+.w-puck-link__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.w-puck-link__summary-empty {
+  color: var(--w-color-text-placeholder, #757575);
+  font-style: italic;
+}
+
+.w-puck-link__summary-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--w-color-text-context, #101010);
+}
+
+.w-puck-link__badge {
+  flex: 0 0 auto;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+  color: var(--w-color-text-label, #52525b);
+}
+
+/* Buttons ---------------------------------------------------------- */
+.w-puck-link__btn,
+.w-puck-link__rte-btn {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--w-color-border-field-default, #929292);
+  border-radius: 6px;
+  background: var(--w-color-surface-field, #fff);
+  color: var(--w-color-text-context, #101010);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.w-puck-link__btn:hover:not(:disabled),
+.w-puck-link__rte-btn:hover:not(:disabled) {
+  border-color: var(--w-color-border-field-hover, #4b4b4b);
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+}
+
+.w-puck-link__btn:disabled,
+.w-puck-link__rte-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.w-puck-link__rte-btn[data-active='true'] {
+  background: var(--w-color-surface-menu-item-active, #e0e0e0);
+  border-color: var(--w-color-border-field-hover, #4b4b4b);
+  font-weight: 600;
+}
+
+.w-puck-link__btn--primary {
+  background: var(--w-color-surface-button-default, #2e1f5e);
+  border-color: var(--w-color-surface-button-default, #2e1f5e);
+  color: var(--w-color-text-button, #fff);
+}
+
+.w-puck-link__btn--primary:hover:not(:disabled) {
+  background: var(--w-color-surface-button-hover, #442d7b);
+  border-color: var(--w-color-surface-button-hover, #442d7b);
+  color: var(--w-color-text-button, #fff);
+}
+
+.w-puck-link__btn--danger {
+  color: var(--w-color-text-error, #cd4444);
+  border-color: var(--w-color-border-field-default, #929292);
+}
+
+/* Editor panel ----------------------------------------------------- */
+.w-puck-link__editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  border-radius: 8px;
+  background: var(--w-color-surface-page, #fff);
+}
+
+.w-puck-link__tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+}
+
+.w-puck-link__tab {
+  flex: 1 1 auto;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--w-color-text-label, #52525b);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.w-puck-link__tab[data-active='true'] {
+  background: var(--w-color-surface-page, #fff);
+  color: var(--w-color-text-context, #101010);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.w-puck-link__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--w-color-border-field-default, #929292);
+  border-radius: 6px;
+  background: var(--w-color-surface-field, #fff);
+  color: var(--w-color-text-context, #101010);
+  font-size: 0.8125rem;
+}
+
+.w-puck-link__actions,
+.w-puck-link__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.w-puck-link__actions {
+  justify-content: flex-end;
+}
+
+.w-puck-link__footer {
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid var(--w-color-border-furniture, #e0e0e0);
+}
+
+.w-puck-link__muted,
+.w-puck-link__current {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--w-color-text-label, #52525b);
+}
+
+.w-puck-link__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--w-color-text-error, #cd4444);
+}
+
+/* Page picker ------------------------------------------------------ */
+.w-puck-link__picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.w-puck-link__results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  border-radius: 6px;
+}
+
+.w-puck-link__results:empty {
+  display: none;
+}
+
+.w-puck-link__result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: none;
+  border-bottom: 1px solid var(--w-color-border-furniture, #e0e0e0);
+  background: transparent;
+  color: var(--w-color-text-context, #101010);
+  cursor: pointer;
+}
+
+.w-puck-link__results li:last-child .w-puck-link__result {
+  border-bottom: none;
+}
+
+.w-puck-link__result:hover {
+  background: var(--w-color-surface-field-inactive, #f1f1f4);
+}
+
+.w-puck-link__result-title {
+  font-weight: 600;
+}
+
+.w-puck-link__result-url {
+  font-size: 0.6875rem;
+  color: var(--w-color-text-label, #52525b);
+}
+
+/* RichText toolbar link control ------------------------------------ */
+.w-puck-link__rte-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.w-puck-link__rte-buttons {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.w-puck-link__rte-btn {
+  padding: 3px 10px;
+}
+
 /* --- Reparented Wagtail DOM: presentation fixes --------------------- */
 
 /* Nav sidebar: present it inline/expanded inside the Main panel instead of the
