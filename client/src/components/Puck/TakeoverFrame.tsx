@@ -8,6 +8,7 @@ import type { ReactNode, RefObject } from 'react';
 import { Puck, usePuck } from '@puckeditor/core';
 import { buildConfig } from './config';
 import { BLOCK_DESCRIPTIONS, PAGE_DESCRIPTION } from './descriptions';
+import { installStaleHotkeyHealer } from './staleHotkeys';
 
 /**
  * The Puck "takeover" frame.
@@ -370,6 +371,11 @@ export function TakeoverFrame({ previewCss }: TakeoverFrameProps = {}) {
     return () => cleanups.forEach((fn) => fn());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Heal Puck's stuck-modifier hotkey state before it misfires (a stale held
+  // Ctrl/Cmd turns a plain "z" typed in a sidebar field into a real undo).
+  // See staleHotkeys.ts for the full mechanism.
+  useEffect(() => installStaleHotkeyHealer(document), []);
 
   const railButton = useCallback(
     (key: PanelKey) => {
