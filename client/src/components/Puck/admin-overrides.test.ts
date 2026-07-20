@@ -126,3 +126,44 @@ describe('admin-overrides.css — sticky rich-text toolbar clearance tripwire', 
     expect(parseInt((m as RegExpMatchArray)[1], 10)).toBeGreaterThanOrEqual(120);
   });
 });
+
+/**
+ * Tripwire for the stacked-toolbar bug in the RichText link control.
+ *
+ * renderRichTextMenu (links/richTextLink.tsx) wraps Puck's default toolbar
+ * `children` plus the Link control in `.w-puck-link__rte-menu`. Puck's toolbar
+ * groups (heading/list, B/I/U, align) are inline-flex siblings that normally
+ * flow in one row; with the wrapper set to `flex-direction: column` each group
+ * stacked on its own line and the toolbar fell apart (four rows tall, which is
+ * also what made the sticky-toolbar dead zone above so large). The wrapper
+ * must stay a wrapping ROW, with only the expanded LinkEditor panel breaking
+ * below it full-width.
+ */
+describe('admin-overrides.css — rich-text toolbar row layout tripwire', () => {
+  const css = fs.readFileSync(
+    path.resolve(__dirname, 'admin-overrides.css'),
+    'utf8',
+  );
+
+  const blockOf = (selector: string): string => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rule = css.match(new RegExp(`${esc}\\s*\\{([^}]*)\\}`));
+    expect(rule).not.toBeNull();
+    return (rule as RegExpMatchArray)[1];
+  };
+
+  it('lays the menu wrapper out as a wrapping row, never a column', () => {
+    const block = blockOf('.w-puck-link__rte-menu');
+    expect(block).not.toMatch(/flex-direction:\s*column/);
+    expect(block).toMatch(/flex-wrap:\s*wrap/);
+  });
+
+  it('promotes the link control into the row and breaks only the editor panel', () => {
+    // display:contents lifts the Link buttons into the toolbar row…
+    expect(blockOf('.w-puck-link__rte')).toMatch(/display:\s*contents/);
+    // …while the expanded panel takes a full-width row of its own.
+    expect(blockOf('.w-puck-link__rte-menu .w-puck-link__editor')).toMatch(
+      /flex-basis:\s*100%/,
+    );
+  });
+});

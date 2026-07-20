@@ -536,10 +536,24 @@ html[data-puck-takeover] .Puck {
 }
 
 /* RichText toolbar link control ------------------------------------ */
+
+/* renderRichTextMenu wraps Puck's default toolbar `children` plus our Link
+ * control in this div. Puck's toolbar groups (heading/list, B/I/U, align) are
+ * inline-flex siblings that flow in a row inside Puck's own menu container —
+ * a `flex-direction: column` here stacks each group on its own line and the
+ * toolbar falls apart. Lay the wrapper out as ONE wrapping row instead, with
+ * the link control's buttons joining that row (`display: contents` promotes
+ * them) and only the expanded LinkEditor panel breaking below, full-width. */
 .w-puck-link__rte-menu {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+}
+
+.w-puck-link__rte {
+  display: contents;
 }
 
 .w-puck-link__rte-buttons {
@@ -549,6 +563,11 @@ html[data-puck-takeover] .Puck {
 
 .w-puck-link__rte-btn {
   padding: 3px 10px;
+}
+
+.w-puck-link__rte-menu .w-puck-link__editor {
+  flex-basis: 100%;
+  min-width: 0;
 }
 
 /* Appending our Link control makes Puck's `RichTextEditor-menu` toolbar taller
@@ -562,7 +581,8 @@ html[data-puck-takeover] .Puck {
  * lands where the user clicked. `scroll-margin-top` fixes the scroll target,
  * not the paint order, so it works regardless of what triggers the scroll
  * (native anchor scrolling or Puck's own selection scrollIntoView).
- * Value = current toolbar height (121px, incl. our appended row) + buffer.
+ * Value = the toolbar at its tallest observed (fully wrapped rows) + buffer;
+ * over-clearance is benign (the field just scrolls a little lower).
  * Scoped to the fields sidebar: `.rich-text` is also the published-page/canvas
  * RichText wrapper class (see puck-render.css), which must not get an editor
  * scroll-margin. `scroll-margin` isn't inherited, and different scroll callers
