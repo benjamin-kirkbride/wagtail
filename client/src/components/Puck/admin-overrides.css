@@ -551,6 +551,29 @@ html[data-puck-takeover] .Puck {
   padding: 3px 10px;
 }
 
+/* Appending our Link control makes Puck's `RichTextEditor-menu` toolbar taller
+ * than it sized itself for (it's `position: sticky; top: 0` inside the
+ * scrollable `.w-puck-takeover__fields` panel). When Puck scrolls a selected
+ * RichText field into view, the browser has no reason to leave clearance for a
+ * sticky header it doesn't know about, so the field's first line(s) land
+ * flush at the panel top — tucked underneath the (taller) sticky toolbar. It
+ * paints on top, so those lines aren't just visually covered: clicks meant for
+ * the text land on the toolbar/Link button instead, and the cursor never
+ * lands where the user clicked. `scroll-margin-top` fixes the scroll target,
+ * not the paint order, so it works regardless of what triggers the scroll
+ * (native anchor scrolling or Puck's own selection scrollIntoView).
+ * Value = current toolbar height (121px, incl. our appended row) + buffer.
+ * Scoped to the fields sidebar: `.rich-text` is also the published-page/canvas
+ * RichText wrapper class (see puck-render.css), which must not get an editor
+ * scroll-margin. `scroll-margin` isn't inherited, and different scroll callers
+ * (the browser's own focus handling, Playwright, Puck's selection scroll) may
+ * scroll either the `.rich-text` wrapper or the inner `.ProseMirror` editable
+ * into view — so both need it, not just the ancestor. */
+.w-puck-takeover__fields .rich-text,
+.w-puck-takeover__fields .rich-text .ProseMirror {
+  scroll-margin-top: 140px;
+}
+
 /* --- Reparented Wagtail DOM: presentation fixes --------------------- */
 
 /* Nav sidebar: present it inline/expanded inside the Main panel instead of the

@@ -91,3 +91,38 @@ describe('admin-overrides.css — rich-text menu z-index tripwire', () => {
     expect(blockOf(popperSel)).toMatch(/z-index:\s*\d+\s*!important/);
   });
 });
+
+/**
+ * Tripwire for the sticky-toolbar dead-zone bug.
+ *
+ * Another geometry invariant jsdom cannot compute (the real regression is
+ * scroll-position + paint-order hit-testing in a browser). Puck's rich-text
+ * toolbar is `position: sticky; top: 0` inside the scrollable fields sidebar
+ * and grew taller when the Link control was appended to it. When Puck scrolls
+ * a selected RichText field into view, the browser leaves no clearance for a
+ * sticky header it doesn't know about, so the field's first lines land flush
+ * at the panel top — underneath the toolbar, which paints on top and eats
+ * every click meant for that text (the cursor never lands where the user
+ * clicked; verified via elementFromPoint in a live browser). The fix gives the
+ * scroll targets `scroll-margin-top` clearance. `scroll-margin` is not
+ * inherited and different scroll callers target either the `.rich-text`
+ * wrapper or the inner `.ProseMirror`, so BOTH selectors are load-bearing.
+ */
+describe('admin-overrides.css — sticky rich-text toolbar clearance tripwire', () => {
+  const css = fs.readFileSync(
+    path.resolve(__dirname, 'admin-overrides.css'),
+    'utf8',
+  );
+
+  it('gives both rich-text scroll targets clearance for the sticky toolbar', () => {
+    const rule = css.match(
+      /\.w-puck-takeover__fields \.rich-text,\s*\.w-puck-takeover__fields \.rich-text \.ProseMirror\s*\{([^}]*)\}/,
+    );
+    expect(rule).not.toBeNull();
+    const m = (rule as RegExpMatchArray)[1].match(/scroll-margin-top:\s*(\d+)px/);
+    expect(m).not.toBeNull();
+    // Must clear the toolbar at its tallest; anything under ~120px re-opens
+    // the dead zone over the first line of text.
+    expect(parseInt((m as RegExpMatchArray)[1], 10)).toBeGreaterThanOrEqual(120);
+  });
+});
