@@ -10,16 +10,6 @@ export type HeadingProps = WithLayout<{
   size: HeadingSize;
 }>;
 
-const sizeOptions = [
-  { value: 'xxxl', label: 'XXXL' },
-  { value: 'xxl', label: 'XXL' },
-  { value: 'xl', label: 'XL' },
-  { value: 'l', label: 'L' },
-  { value: 'm', label: 'M' },
-  { value: 's', label: 'S' },
-  { value: 'xs', label: 'XS' },
-];
-
 /**
  * `l` is the neutral size: it emits NO class, so the heading renders at the
  * site's own scale (the marketing site's `.block-heading h2` = 1.3rem, or the
@@ -29,17 +19,25 @@ const sizeOptions = [
  * other value emits `block-heading--<size>`, whose real-specificity rule in
  * `puck-render.css` (`.block-heading .block-heading--<size>`, 0,2,0) beats the
  * site's `.block-heading h2` (0,1,1) to become a genuine override.
+ *
+ * `size` no longer has a field (the sidebar offers only the RichText-style
+ * level picker), but stored overrides keep rendering — see fields.
  */
 const SIZE_SENTINEL = 'l';
 
+/**
+ * The same heading choices Puck's RichText toolbar offers, with the same
+ * labels ("Heading 1" … "Heading 6" — see RichTextMenu's HeadingSelect
+ * use-options.ts), so picking a level here feels identical to picking one in
+ * a RichText block. Values stay '1'..'6' for stored-data compatibility.
+ */
 const levelOptions = [
-  { label: '', value: '' },
-  { label: '1', value: '1' },
-  { label: '2', value: '2' },
-  { label: '3', value: '3' },
-  { label: '4', value: '4' },
-  { label: '5', value: '5' },
-  { label: '6', value: '6' },
+  { label: 'Heading 1', value: '1' },
+  { label: 'Heading 2', value: '2' },
+  { label: 'Heading 3', value: '3' },
+  { label: 'Heading 4', value: '4' },
+  { label: 'Heading 5', value: '5' },
+  { label: 'Heading 6', value: '6' },
 ];
 
 const HeadingInternal: ComponentConfig<HeadingProps> = {
@@ -49,14 +47,14 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
       // Hero.tsx. (Demo uses textarea; text is fine for a heading.)
       type: 'text',
     },
-    size: {
-      type: 'select',
-      options: sizeOptions,
-    },
     level: {
       type: 'select',
       options: levelOptions,
     },
+    // No `size` field: the sidebar exposes only the RichText-style level
+    // picker. Stored `size` overrides (the XXXL–XS system) are still honored
+    // by render() for data compatibility, but new overrides can't be authored
+    // — the level IS the size, exactly as in a RichText block.
     align: {
       type: 'radio',
       options: [
@@ -69,8 +67,11 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
   defaultProps: {
     align: 'left',
     text: 'Heading',
-    // Default to the neutral size so a fresh heading inherits the site's scale
-    // (site default unless explicitly overridden).
+    // The site's content heading — same default the render falls back to for
+    // stored data with no level.
+    level: '2',
+    // Neutral size so a fresh heading inherits the site's per-level scale
+    // (site default unless explicitly overridden; see render()).
     size: SIZE_SENTINEL,
     layout: {
       padding: '8px',
@@ -97,11 +98,12 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
 /**
  * Renders a clean semantic heading inside a `.block-heading` root (the demo's
  * inline font sizes and Section max-width are dropped) so the site's
- * `.block-heading h2` typography styles it. `size` drives a `block-heading--*`
- * modifier class (not an inline font-size) that yields to the site scale at the
- * neutral `l` value and overrides it otherwise via a real-specificity rule in
- * `puck-render.css`; `align` is a field-driven override that yields to the
- * site's default. Neutral / per-level fallbacks live in `puck-render.css`.
+ * `.block-heading h2` typography styles it. The level picker mirrors the
+ * RichText toolbar's heading dropdown ("Heading 1" … "Heading 6") and is the
+ * only size control — each level renders at the site's scale for that level
+ * (per-level fallbacks in `puck-render.css`). Stored `size` overrides from the
+ * retired XXXL–XS system still render for data compatibility; `align` is a
+ * field-driven override that yields to the site's default.
  */
 export const Heading = withLayout(HeadingInternal, 'block-heading');
 

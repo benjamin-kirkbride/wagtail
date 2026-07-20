@@ -203,6 +203,49 @@ describe('Hero rewired fields', () => {
   });
 });
 
+/**
+ * The Heading block's level picker must mirror the RichText toolbar's heading
+ * dropdown — same choices, same labels ("Heading 1" … "Heading 6", from Puck's
+ * RichTextMenu HeadingSelect) — so the two ways of authoring a heading feel
+ * identical. It is also the block's ONLY size control: the XXXL–XS size field
+ * was retired in the same change (stored overrides still render — see
+ * "Heading size rewired" below, which now guards that data compatibility).
+ */
+describe('Heading level picker mirrors RichText', () => {
+  it('offers exactly the RichText heading choices, labeled the same', () => {
+    const options = comp('Heading').fields.level.options;
+    expect(options).toEqual([
+      { label: 'Heading 1', value: '1' },
+      { label: 'Heading 2', value: '2' },
+      { label: 'Heading 3', value: '3' },
+      { label: 'Heading 4', value: '4' },
+      { label: 'Heading 5', value: '5' },
+      { label: 'Heading 6', value: '6' },
+    ]);
+  });
+
+  it('defaults to Heading 2 (the site content heading)', () => {
+    expect(comp('Heading').defaultProps.level).toBe('2');
+  });
+
+  it('has no size field, but legacy stored data with no level still renders h2', () => {
+    expect(comp('Heading').fields.size).toBeUndefined();
+    const base = comp('Heading').defaultProps;
+    const { container } = render(
+      comp('Heading').render({ ...base, level: undefined, puck: stubPuck }),
+    );
+    expect(container.querySelector('.block-heading h2')).not.toBeNull();
+  });
+
+  it('renders the picked level as the matching semantic tag', () => {
+    const base = comp('Heading').defaultProps;
+    const { container } = render(
+      comp('Heading').render({ ...base, level: '4', puck: stubPuck }),
+    );
+    expect(container.querySelector('.block-heading h4')).not.toBeNull();
+  });
+});
+
 describe('Heading size rewired', () => {
   function renderHeading(size: string) {
     const base = comp('Heading').defaultProps;

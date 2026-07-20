@@ -9,7 +9,7 @@ export const BLOCK_DESCRIPTIONS: Record<string, string> = {
   Card: 'An icon with a title and a short description. Works well in a grid of features.',
   Flex: 'A flexible container that lays out the blocks inside it in a row or column.',
   Grid: 'A column grid container. Blocks placed inside are arranged into equal columns.',
-  Heading: 'A section heading. Level sets the HTML heading tag; size adjusts the visual scale.',
+  Heading: 'A section heading. Pick a level (Heading 1–6), just like headings in a RichText block.',
   Hero: "The page's lead banner: a large title with intro text, optional buttons and an image.",
   Logos: 'A row of logos, each an image with alt text.',
   RichText: 'Formatted text with bold, italics, links and lists. Edit it directly in the canvas.',
