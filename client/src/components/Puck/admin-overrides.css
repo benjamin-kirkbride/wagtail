@@ -33,6 +33,25 @@ html[data-puck-takeover] body {
   background: var(--w-color-surface-page, #fff);
 }
 
+/* Puck's rich-text field renders its heading / list / alignment menus as Radix
+ * poppers portaled to <body> with `z-index: auto`. Stock Puck keeps its editor
+ * root at the default stacking level, so those body-level portals sit on top by
+ * DOM order. Our takeover root above is a `z-index: 150` stacking context, which
+ * paints OVER any `z-index: auto` body sibling — so the menu is drawn behind the
+ * takeover and its options are visible but not hit-testable (keyboard selection
+ * still works, since it bypasses pointer hit-testing; clicking an option lands on
+ * the occluding editor content instead and silently does nothing). Lift the
+ * portal above the takeover so the options are clickable again. Scoped to the
+ * takeover — only there does the occluding stacking context exist.
+ *
+ * `!important` is load-bearing: Radix writes `z-index: auto` INLINE on the popper
+ * wrapper (alongside its positioning styles), and an inline declaration beats any
+ * stylesheet rule regardless of selector specificity. Without `!important` the
+ * override is silently defeated and the menu stays occluded. */
+html[data-puck-takeover] [data-radix-popper-content-wrapper] {
+  z-index: 200 !important;
+}
+
 /* Puck's own root wrapper (`.Puck`, `id={instanceId}`) must fill the overlay.
  *
  * By default it lays out in normal flow, and because our `.w-puck-takeover`

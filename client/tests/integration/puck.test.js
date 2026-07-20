@@ -15,6 +15,11 @@
  *      the canvas grows the stored document by one block.
  *   d. White-on-white canvas / theme relabel (5b327fab8c): the preview iframe
  *      root never carries w-theme-dark or w-theme-system.
+ *   e. RichText menu occlusion: the heading/list/alignment dropdowns are Radix
+ *      poppers portaled to <body> at z-index:auto; the takeover's z-index:150
+ *      stacking context painted over them, so a mouse click on an option landed
+ *      on the editor content beneath and silently no-op'd. A real click on a
+ *      "Bullet list" option must actually convert the block.
  *
  * Running (see docs/contributing/developing.md → Integration tests):
  *   export DJANGO_SETTINGS_MODULE=wagtail.test.settings_ui
@@ -296,6 +301,62 @@ describe('Puck takeover editor (integration)', () => {
 
     const after = await readDocument();
     expect(after.content.length).toBe(beforeCount + 1);
+  });
+
+  it('applies a RichText toolbar dropdown selection on a real mouse click', async () => {
+    if (guard()) return;
+
+    // Bug: the heading / list / alignment menus are Radix poppers portaled to
+    // <body> at z-index:auto; the z-index:150 takeover stacking context painted
+    // over them, so a mouse click landed on the occluding editor content and the
+    // command silently no-op'd (keyboard still worked). Drive a real click on a
+    // menu option and assert the command actually took effect.
+    const frame = await previewFrame();
+    // Select the RichText block by clicking its rendered body in the canvas.
+    await frame.waitForSelector('text=Seeded rich body', { timeout: 30000 });
+    await frame.click('text=Seeded rich body');
+
+    const fields = page.locator('.w-puck-takeover__fields');
+    // The richtext field renders its TipTap editor in the sidebar.
+    const pm = fields.locator('.ProseMirror').first();
+    await pm.waitFor({ state: 'visible', timeout: 30000 });
+    // Place the cursor in the editor (the command target).
+    await pm.click();
+
+    // The toolbar exposes three "Select" dropdowns (heading, list, alignment).
+    // Open each until one offers the "Bullet list" option, then click it — a
+    // real, hit-tested mouse click, which is what the occlusion broke.
+    const triggers = fields.getByRole('button', { name: 'Select' });
+    const triggerCount = await triggers.count();
+    let applied = false;
+    for (let i = 0; i < triggerCount; i += 1) {
+      await triggers.nth(i).click();
+      const option = page.getByRole('button', { name: 'Bullet list', exact: true });
+      if (await option.count()) {
+        await option.first().click(); // hit-tested; occlusion would swallow it
+        applied = true;
+        break;
+      }
+      // Not this menu — close it before trying the next trigger.
+      await page.keyboard.press('Escape');
+    }
+    expect(applied).toBe(true);
+    await page.waitForTimeout(500);
+
+    // The click must have converted the block into a list in the live editor.
+    const html = await pm.innerHTML();
+    expect(html).toMatch(/<ul/);
+
+    // …and it propagates through Puck's onChange into the stored document.
+    let stored = '';
+    for (let i = 0; i < 10; i += 1) {
+      const doc = await readDocument();
+      const rt = doc.content.find((b) => b.type === 'RichText');
+      stored = (rt && rt.props && rt.props.richtext) || '';
+      if (/<ul/.test(stored)) break;
+      await page.waitForTimeout(300);
+    }
+    expect(stored).toMatch(/<ul/);
   });
 
   it('never leaves the preview iframe root on a dark theme (relabel)', async () => {
