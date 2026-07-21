@@ -19,3 +19,7 @@ The main developer documentation for Wagtail lives in the `docs/contributing` di
 ### StreamField and StreamBlock template access
 
 - Wagtail's StreamBlock and StreamField use the same template syntax, but they differ from standard Django field access. When you use StreamField and other custom block types in Wagtail templates, you usually need to use the value property in your data variables. 
+
+### Puck editor: source edits need a rebuild
+
+- The Puck visual editor (`client/src/components/Puck/`) is a separate webpack build from the main admin bundle (see `client/webpack.puck.config.js`) and is compiled to static assets under `wagtail/contrib/puck/static/wagtailpuck/`. Editing `.tsx`/`.ts` source under `client/src/components/Puck/` does **not** take effect in a running admin (e.g. `http://localhost:8123/admin/pages/.../edit/`) until you rebuild it: `npm run build:puck`. There is no dev-mode watcher wired up for this bundle, so the rebuild is a manual step after every source change.

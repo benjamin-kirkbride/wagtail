@@ -73,8 +73,12 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
     // Neutral size so a fresh heading inherits the site's per-level scale
     // (site default unless explicitly overridden; see render()).
     size: SIZE_SENTINEL,
+    // Headings read as section breaks, so they default to noticeably more
+    // top padding than a body block — this used to come from `.block-heading
+    // h2`'s own `margin-top` plus the stream's generic flow-gap; both are
+    // gone now that Top Padding is the sole source of inter-block spacing.
     layout: {
-      padding: '8px',
+      padding: '3rem',
     },
   },
   render: ({ align, text, level, size }) => {
@@ -87,7 +91,10 @@ const HeadingInternal: ComponentConfig<HeadingProps> = {
     return (
       <Tag
         className={sizeClass}
-        style={align && align !== 'left' ? { textAlign: align } : undefined}
+        style={{
+          margin: 0,
+          textAlign: align && align !== 'left' ? align : undefined,
+        }}
       >
         {text}
       </Tag>

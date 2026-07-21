@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@puckeditor/core';
 import type { CSSProperties } from 'react';
 import { linkField } from '../links/LinkField';
+import { spacingOptions } from '../components/options';
 
 /**
  * Simplified port of the demo Hero. The demo's `external` quote picker,
@@ -19,15 +20,12 @@ import { linkField } from '../links/LinkField';
  * `puck-render.css`.
  *
  * Design contract for the field-driven overrides ("site default unless
- * explicitly overridden"): at their site-default/empty values the fields emit
- * NO inline style, so the site CSS owns the look; only an explicit non-default
- * value emits a winning inline override.
- *
- * Data-compatibility sentinel (the trap): the marketing conversion stored
- * `padding: "64px"` on heroes as a CONVERSION ARTIFACT, not editorial intent —
- * those heroes render with the site's spacing today and must keep doing so, so
- * `padding === "64px"` (and empty) is treated as "use the site's spacing" and
- * emits nothing; any other value is a real vertical-padding override.
+ * explicitly overridden"): at its site-default/empty value, `align` emits NO
+ * inline style, so the site CSS owns the look; only an explicit non-default
+ * value emits a winning inline override. `padding` is different — it's always
+ * emitted, literally, as `paddingTop`, same as every other block's Top
+ * Padding field (see `Layout.tsx`): no block gets inherent CSS padding, so
+ * `.stream > .block-hero` carries no `padding-top` of its own.
  *
  * `align`: `"center"` is the site default (emit nothing); `"left"` and
  * `"right"` emit real inline overrides. (An earlier revision aliased legacy
@@ -51,12 +49,8 @@ export type HeroProps = {
   }[];
 };
 
-/**
- * The legacy conversion default for vertical padding. A hero storing exactly
- * this value is using the converter's placeholder, not an editorial choice, so
- * it yields to the site's own hero spacing.
- */
-const PADDING_SENTINEL = '64px';
+/** The default top padding for a fresh Hero — matches the site's old fixed 5rem. */
+const PADDING_DEFAULT = '5rem';
 
 export const Hero: ComponentConfig<HeroProps> = {
   fields: {
@@ -117,11 +111,20 @@ export const Hero: ComponentConfig<HeroProps> = {
         },
       },
     },
-    // Puck surfaces guidance via the field `label` (there is no separate help
-    // prop). Spell out the sentinel behaviour there.
+    // A `select`, matching the dropdown every other block's shared `layout`
+    // field uses (see `Layout.tsx`) — this used to be a free-text input,
+    // which was inconsistent.
     padding: {
-      type: 'text',
-      label: "Vertical padding, e.g. 96px. Leave as default to use the site's spacing.",
+      type: 'select',
+      label: 'Top Padding',
+      options: [
+        { label: '0rem', value: '0rem' },
+        ...spacingOptions.map((option) =>
+          option.value === PADDING_DEFAULT
+            ? { ...option, label: `${option.label} (default)` }
+            : option,
+        ),
+      ],
     },
   },
   inline: true,
@@ -130,7 +133,7 @@ export const Hero: ComponentConfig<HeroProps> = {
     align: 'center',
     description: 'Description',
     buttons: [],
-    padding: PADDING_SENTINEL,
+    padding: PADDING_DEFAULT,
     image: { mode: 'inline' },
   },
   render: ({ title, description, align, padding, buttons, image, puck }) => {
@@ -140,14 +143,9 @@ export const Hero: ComponentConfig<HeroProps> = {
     // "left"/"right" are real overrides (see the block doc-comment).
     const alignOverride =
       align === 'right' || align === 'left' ? align : undefined;
-    // "64px" (and empty) means "use the site's hero spacing" — emit nothing.
-    const paddingOverride =
-      padding && padding !== PADDING_SENTINEL ? padding : undefined;
-
     const sectionStyle: CSSProperties = {};
-    if (paddingOverride) {
-      sectionStyle.paddingTop = paddingOverride;
-      sectionStyle.paddingBottom = paddingOverride;
+    if (padding) {
+      sectionStyle.paddingTop = padding;
     }
     if (alignOverride) {
       sectionStyle.textAlign = alignOverride;

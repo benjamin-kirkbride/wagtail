@@ -111,10 +111,10 @@ function renderHero(props: Record<string, unknown>) {
 }
 
 describe('Hero rewired fields', () => {
-  it('padding sentinel "64px" emits no inline padding (byte-compat)', () => {
-    const { container } = renderHero({ padding: '64px' });
+  it('the default padding "5rem" emits a real inline paddingTop, not a deferral', () => {
+    const { container } = renderHero({ padding: '5rem' });
     const hero = container.querySelector('section.block-hero') as HTMLElement;
-    expect(hero.getAttribute('style')).toBeNull();
+    expect(hero.style.paddingTop).toBe('5rem');
   });
 
   it('empty padding emits no inline padding', () => {
@@ -123,11 +123,11 @@ describe('Hero rewired fields', () => {
     expect(hero.style.paddingTop).toBe('');
   });
 
-  it('explicit padding emits paddingTop/paddingBottom override', () => {
-    const { container } = renderHero({ padding: '96px' });
+  it('explicit padding emits a paddingTop override, no paddingBottom', () => {
+    const { container } = renderHero({ padding: '6rem' });
     const hero = container.querySelector('section.block-hero') as HTMLElement;
-    expect(hero.style.paddingTop).toBe('96px');
-    expect(hero.style.paddingBottom).toBe('96px');
+    expect(hero.style.paddingTop).toBe('6rem');
+    expect(hero.style.paddingBottom).toBe('');
   });
 
   it('align "center" (site default) emits no textAlign', () => {
@@ -198,7 +198,7 @@ describe('Hero rewired fields', () => {
 
   it('the field help text / placeholder are surfaced (padding label, image url placeholder)', () => {
     const fields = comp('Hero').fields;
-    expect(fields.padding.label).toMatch(/Leave as default/i);
+    expect(fields.padding.label).toBe('Top Padding');
     expect(fields.image.objectFields.url.placeholder).toMatch(/image URL/i);
   });
 });

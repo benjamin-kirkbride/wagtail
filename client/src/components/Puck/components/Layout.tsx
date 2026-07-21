@@ -56,8 +56,8 @@ export const layoutField: ObjectField<LayoutFieldProps> = {
     },
     padding: {
       type: 'select',
-      label: 'Vertical Padding',
-      options: [{ label: '0px', value: '0px' }, ...spacingOptions],
+      label: 'Top Padding',
+      options: [{ label: '0rem', value: '0rem' }, ...spacingOptions],
     },
   },
 };
@@ -76,7 +76,6 @@ const Layout = forwardRef<HTMLDivElement, LayoutProps>(
             ? `span ${Math.max(Math.min(layout.spanRow, 12), 1)}`
             : undefined,
           paddingTop: layout?.padding,
-          paddingBottom: layout?.padding,
           flex: layout?.grow ? '1 1 0' : undefined,
           ...style,
         }}
@@ -114,7 +113,7 @@ export function withLayout<
       // carry `spanCol: 1`/`spanRow: 1` still render them (the render logic is
       // unchanged), so previously saved documents stay byte-identical.
       layout: {
-        padding: '0px',
+        padding: '2.5rem',
         grow: false,
         ...componentConfig.defaultProps?.layout,
       },
